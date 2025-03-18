@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-export const connectDB = async (): Promise<void> => {
+const connectDB = async (): Promise<void> => {
     try {
         const dbUrl: string = process.env.MONGODB_URL || "";
         const dbName: string = process.env.DB_NAME || "default";
@@ -15,3 +15,5 @@ export const connectDB = async (): Promise<void> => {
         process.exit(1);
     }
 };
+
+export default connectDB;
