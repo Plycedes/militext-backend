@@ -15,7 +15,7 @@ const initializeServer = async (): Promise<void> => {
             console.log(`Server is running on port: ${PORT}`);
         });
 
-        const tempDir: string = path.join(__dirname, "../", "temp", "files");
+        const tempDir: string = path.join(__dirname, "../", "public", "images");
         if (!fs.existsSync(tempDir)) {
             fs.mkdirSync(tempDir, { recursive: true });
             console.log("Folder created");
