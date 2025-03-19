@@ -1,54 +1,26 @@
-import bcrypt from "bcrypt";
-import crypto from "crypto";
+import mongoose, { Schema, Document, Types } from "mongoose";
 import jwt from "jsonwebtoken";
-import mongoose, { Schema, Document, Model, Types } from "mongoose";
+import bcrypt from "bcrypt";
 import { JsonObject } from "../types/jsonTypes";
-import {
-    AvailableSocialLogins,
-    AvailableUserRoles,
-    USER_TEMPORARY_TOKEN_EXPIRY,
-    UserLoginType,
-    UserRolesEnum,
-} from "../constants";
+import ms from "ms";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export interface IUser extends Document {
-    avatar: {
-        url: string;
-        localPath: string;
-    };
     username: string;
     email: string;
-    role: string;
+    avatar: string;
+    avatarId: string;
     password: string;
-    loginType: string;
-    isEmailVerified: boolean;
     refreshToken?: string;
-    forgotPasswordToken?: string;
-    forgotPasswordExpiry?: Date;
-    emailVerificationToken?: string;
-    emailVerificationExpiry?: Date;
     isPasswordCorrect(password: string): Promise<boolean>;
     generateAccessToken(): string;
     generateRefreshToken(): string;
-    generateTemporaryToken(): {
-        unHashedToken: string;
-        hashedToken: string;
-        tokenExpiry: number;
-    };
 }
 
 const userSchema = new Schema<IUser>(
     {
-        avatar: {
-            type: {
-                url: String,
-                localPath: String,
-            },
-            default: {
-                url: `https://via.placeholder.com/200x200.png`,
-                localPath: "",
-            },
-        },
         username: {
             type: String,
             required: true,
@@ -64,30 +36,21 @@ const userSchema = new Schema<IUser>(
             lowercase: true,
             trim: true,
         },
-        role: {
+        avatar: {
             type: String,
-            enum: AvailableUserRoles,
-            default: UserRolesEnum.USER,
+            required: true,
+        },
+        avatarId: {
+            type: String,
             required: true,
         },
         password: {
             type: String,
             required: [true, "Password is required"],
         },
-        loginType: {
+        refreshToken: {
             type: String,
-            enum: AvailableSocialLogins,
-            default: UserLoginType.EMAIL_PASSWORD,
         },
-        isEmailVerified: {
-            type: Boolean,
-            default: false,
-        },
-        refreshToken: String,
-        forgotPasswordToken: String,
-        forgotPasswordExpiry: Date,
-        emailVerificationToken: String,
-        emailVerificationExpiry: Date,
     },
     { timestamps: true }
 );
@@ -99,7 +62,7 @@ userSchema.pre<IUser>("save", async function (next) {
 });
 
 userSchema.methods.isPasswordCorrect = async function (password: string): Promise<boolean> {
-    return bcrypt.compare(password, this.password);
+    return await bcrypt.compare(password, this.password);
 };
 
 userSchema.methods.generateAccessToken = function (): string {
@@ -107,7 +70,6 @@ userSchema.methods.generateAccessToken = function (): string {
         _id: (this._id as Types.ObjectId).toString(),
         email: this.email,
         username: this.username,
-        role: this.role,
     };
 
     const secret = process.env.ACCESS_TOKEN_SECRET as string;
@@ -125,6 +87,8 @@ userSchema.methods.generateAccessToken = function (): string {
 userSchema.methods.generateRefreshToken = function (): string {
     const payload: JsonObject = {
         _id: (this._id as Types.ObjectId).toString(),
+        email: this.email,
+        username: this.username,
     };
 
     const secret = process.env.REFRESH_TOKEN_SECRET as string;
@@ -139,14 +103,4 @@ userSchema.methods.generateRefreshToken = function (): string {
     return jwt.sign(payload, secret, options);
 };
 
-userSchema.methods.generateTemporaryToken = function () {
-    const unHashedToken = crypto.randomBytes(20).toString("hex");
-
-    const hashedToken = crypto.createHash("sha256").update(unHashedToken).digest("hex");
-
-    const tokenExpiry = Date.now() + USER_TEMPORARY_TOKEN_EXPIRY;
-
-    return { unHashedToken, hashedToken, tokenExpiry };
-};
-
-export const User: Model<IUser> = mongoose.model<IUser>("User", userSchema);
+export const User = mongoose.model<IUser>("User", userSchema);
