@@ -26,9 +26,7 @@ export const verifyJWT = asyncHandler(
             const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET as string) as {
                 _id: string;
             };
-            const user = await User.findById(decodedToken._id).select(
-                "-password -refreshToken -emailVerificationToken -emailVerificationExpiry"
-            );
+            const user = await User.findById(decodedToken._id).select("-password -refreshToken");
             if (!user) {
                 throw new ApiError(401, "Invalid Access Token");
             }
@@ -63,15 +61,15 @@ export const getLoggedInUserOrIgnore = asyncHandler(
     }
 );
 
-export const verifyPermission = (roles: string[] = []) => {
-    asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
-        if (!req.user?._id) {
-            throw new ApiError(401, "Unauthorized request");
-        }
-        if (roles.includes(req.user?.role)) {
-            next();
-        } else {
-            throw new ApiError(403, "User not allowed to perform this action");
-        }
-    });
-};
+// export const verifyPermission = (roles: string[] = []) => {
+//     asyncHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+//         if (!req.user?._id) {
+//             throw new ApiError(401, "Unauthorized request");
+//         }
+//         if (roles.includes(req.user?.role)) {
+//             next();
+//         } else {
+//             throw new ApiError(403, "User not allowed to perform this action");
+//         }
+//     });
+// };

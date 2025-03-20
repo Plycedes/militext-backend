@@ -18,7 +18,7 @@ const uploadOnCloudinary = async (localFilePath: string): Promise<JsonObject | n
         const response = await cloudinary.uploader.upload(localFilePath, {
             resource_type: "auto",
         });
-        console.log("File uploaded", response.url);
+        //console.log("File uploaded", response.url);
         fs.unlinkSync(localFilePath);
 
         const result: JsonObject = {

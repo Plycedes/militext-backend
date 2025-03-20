@@ -12,7 +12,7 @@ export const generateProfilePicture = async (username: string): Promise<JsonObje
             .join("");
 
         const uniqueId = uuidv4();
-        const filePath = `./temp/files/${uniqueId}${username}.png`;
+        const filePath = `./public/images/${uniqueId}${username}.png`;
         const canvas = createCanvas(128, 128);
         const ctx = canvas.getContext("2d");
 
