@@ -2,7 +2,6 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { JsonObject } from "../types/jsonTypes";
-import ms from "ms";
 import dotenv from "dotenv";
 
 dotenv.config();
