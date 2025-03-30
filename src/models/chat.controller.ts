@@ -1,10 +1,4 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
-import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
-import { JsonObject } from "../types/jsonTypes";
-import dotenv from "dotenv";
-
-dotenv.config();
+import mongoose, { Schema, Document, Types, Model } from "mongoose";
 
 export interface IChat extends Document {
     name: string;
@@ -42,4 +36,4 @@ const chatSchema = new Schema<IChat>(
     { timestamps: true }
 );
 
-export const Chat = mongoose.model("Chat", chatSchema);
+export const Chat: Model<IChat> = mongoose.model<IChat>("Chat", chatSchema);
