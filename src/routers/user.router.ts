@@ -13,13 +13,15 @@ import {
 
 const router: Router = Router();
 
+router.use(verifyJWT);
+
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/refresh-token", refreshAccessToken);
 
-router.get("/current-user", verifyJWT, getCurrentUser);
+router.get("/current-user", getCurrentUser);
 
-router.post("/logout", verifyJWT, logoutUser);
-router.post("/change-password", verifyJWT, changeCurrentPassword);
-router.post("/update-avatar", verifyJWT, upload.single("avatar"), updateUserAvatar);
+router.post("/logout", logoutUser);
+router.post("/change-password", changeCurrentPassword);
+router.post("/update-avatar", upload.single("avatar"), updateUserAvatar);
 export default router;
