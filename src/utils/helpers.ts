@@ -1,6 +1,4 @@
 import fs from "fs";
-import { Request } from "express";
-import mongoose from "mongoose";
 import { JsonObject, JsonArray } from "../types/jsonTypes";
 import { MulterRequest } from "../middlewares/multer.middleware";
 
@@ -56,7 +54,7 @@ export const removeLocalFile = (localPath: string): void => {
     });
 };
 
-export const removedUnusedMulterImageFilesOnError = (req: MulterRequest): void => {
+export const removedUnusedMulterImageFilesOnError = (req: any): void => {
     try {
         if (req.file) {
             removeLocalFile(req.file.path);

@@ -1,5 +1,4 @@
-import { Response, NextFunction } from "express";
-import { MulterRequest } from "./multer.middleware";
+import { Request, Response, NextFunction, ErrorRequestHandler } from "express";
 import { ApiError } from "../utils/ApiError";
 import { removedUnusedMulterImageFilesOnError } from "../utils/helpers";
 import mongoose from "mongoose";
@@ -7,16 +6,17 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const errorHandler = (
+// Make it generic over any Request type
+const errorHandler: ErrorRequestHandler = (
     err: unknown,
-    req: MulterRequest,
+    req: Request,
     res: Response,
     next: NextFunction
-): Response => {
+) => {
     let error: any = err as ApiError;
 
     if (!(error instanceof ApiError)) {
-        const statusCode: any = error instanceof mongoose.Error ? 400 : 500;
+        const statusCode = error instanceof mongoose.Error ? 400 : 500;
         const message = (error as Error).message || "Something went wrong";
 
         error = new ApiError(
@@ -35,8 +35,12 @@ const errorHandler = (
 
     console.error(`${error.message}`);
 
-    removedUnusedMulterImageFilesOnError(req);
-    return res.status(error.statusCode).json(response);
+    // If you want to support MulterRequest safely:
+    if ("file" in req) {
+        removedUnusedMulterImageFilesOnError(req as any);
+    }
+
+    res.status(error.statusCode).json(response);
 };
 
 export { errorHandler };

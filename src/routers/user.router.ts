@@ -13,10 +13,11 @@ import {
 
 const router: Router = Router();
 
-router.use(verifyJWT);
-
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+
+router.use(verifyJWT);
+
 router.post("/refresh-token", refreshAccessToken);
 
 router.get("/current-user", getCurrentUser);

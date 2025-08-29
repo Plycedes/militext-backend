@@ -14,6 +14,12 @@ export interface CustomRequest<T = any, U extends ParsedQs = ParsedQs> extends R
     query: U;
 }
 
+export interface AuthRequest<T = any, U extends ParsedQs = ParsedQs> extends Request {
+    user: IUser;
+    body: T;
+    query: U;
+}
+
 export const verifyJWT = asyncHandler(
     async (req: CustomRequest, _: Response, next: NextFunction): Promise<void> => {
         try {
