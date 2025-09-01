@@ -1,28 +1,20 @@
 import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware";
 import { upload } from "../middlewares/multer.middleware";
-import {
-    registerUser,
-    loginUser,
-    logoutUser,
-    refreshAccessToken,
-    changeCurrentPassword,
-    getCurrentUser,
-    updateUserAvatar,
-} from "../controllers/user.controller";
+import { UserController } from "../controllers/user.controller";
 
 const router: Router = Router();
 
-router.post("/register", registerUser);
-router.post("/login", loginUser);
+router.post("/register", UserController.registerUser);
+router.post("/login", UserController.loginUser);
 
 router.use(verifyJWT);
 
-router.post("/refresh-token", refreshAccessToken);
+router.post("/refresh-token", UserController.refreshAccessToken);
 
-router.get("/current-user", getCurrentUser);
+router.get("/current-user", UserController.getCurrentUser);
 
-router.post("/logout", logoutUser);
-router.post("/change-password", changeCurrentPassword);
-router.post("/update-avatar", upload.single("avatar"), updateUserAvatar);
+router.post("/logout", UserController.logoutUser);
+router.post("/change-password", UserController.changeCurrentPassword);
+router.post("/update-avatar", upload.single("avatar"), UserController.updateUserAvatar);
 export default router;
