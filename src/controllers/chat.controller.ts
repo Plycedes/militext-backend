@@ -522,3 +522,23 @@ export const removeParticipantFromGroupChat = asyncHandler(
             .json(new ApiResponse(200, payload, "Participant removed successfully"));
     }
 );
+
+export const getAllChats = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const chats = await Chat.aggregate([
+        {
+            $match: {
+                participants: { $elemMatch: { $eq: req.user._id } },
+            },
+        },
+        {
+            $sort: {
+                updatedAt: -1,
+            },
+        },
+        ...chatCommonAggregation(),
+    ]);
+
+    return res
+        .status(200)
+        .json(new ApiResponse(200, chats || [], "User chats fetched successfully"));
+});
