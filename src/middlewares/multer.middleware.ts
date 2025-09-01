@@ -7,9 +7,13 @@ import { IUser } from "../models/user.model";
 export interface MulterRequest<T = any> extends Request {
     user?: IUser;
     body: T;
-    files?: {
-        attachments?: Express.Multer.File[];
-    };
+    files?:
+        | { [fieldname: string]: Express.Multer.File[] }
+        | Express.Multer.File[]
+        | {
+              attachments?: Express.Multer.File[];
+          };
+    file?: Express.Multer.File;
 }
 
 const storage: StorageEngine = multer.diskStorage({
