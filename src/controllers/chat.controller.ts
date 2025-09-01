@@ -1,5 +1,5 @@
 import mongoose, { PipelineStage, Types } from "mongoose";
-import { Chat, IChat } from "../models/chat.controller";
+import { Chat } from "../models/chat.model";
 import { ChatMessage, IMessage } from "../models/message.model";
 import { removeLocalFile } from "../utils/helpers";
 import { asyncHandler } from "../utils/asyncHandler";
