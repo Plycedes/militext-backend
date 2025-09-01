@@ -19,6 +19,10 @@ import {
     ChangePasswordRequestBody,
 } from "../types/requestTypes";
 
+type AttachmentRequest = Request & {
+    files?: { attachments?: Express.Multer.File[] };
+};
+
 export const registerUser = asyncHandler(
     async (req: CustomRequest<RegisterRequestBody>, res: Response): Promise<Response> => {
         const { email, username, password } = req.body;
@@ -201,15 +205,15 @@ export const getCurrentUser = asyncHandler(
 
 export const updateUserAvatar = asyncHandler(
     async (req: MulterRequest, res: Response): Promise<Response> => {
-        const avatarLocalPath = req.files?.attachments[0]?.path;
+        const { files } = req.files as AttachmentRequest;
 
-        if (!avatarLocalPath) {
+        if (!files || !files.attachments) {
             throw new ApiError(400, "Avatar file is missing");
         }
 
         console.log("File received");
 
-        const avatar = await uploadOnCloudinary(avatarLocalPath);
+        const avatar = await uploadOnCloudinary(files.attachments[0].path);
         if (!avatar) throw new ApiError(400, "Error while uploading avatar");
 
         const oldUser = await User.findById(req.user?._id).select("avatarId");

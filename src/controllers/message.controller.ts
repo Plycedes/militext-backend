@@ -11,6 +11,10 @@ import { getLocalPath, getStaticFilePath, removeLocalFile } from "../utils/helpe
 import { emitSocketEvent } from "../socket";
 import { ChatEventEnum } from "../constants";
 
+type AttachmentRequest = Request & {
+    files?: { attachments?: Express.Multer.File[] };
+};
+
 const chatMessageCommonAggregation = (): PipelineStage[] => {
     return [
         {
@@ -75,7 +79,9 @@ export class MessageController {
         const { chatId } = req.params;
         const { content } = req.body;
 
-        if (!content && !req.files?.attachments?.length) {
+        const { files } = req.files as AttachmentRequest;
+
+        if (!content && !files?.attachments?.length) {
             throw new ApiError(400, "Message content or attachment is required");
         }
 
@@ -87,8 +93,8 @@ export class MessageController {
 
         const messageFiles: { url: string; localPath: string }[] = [];
 
-        if (req.files?.attachments?.length) {
-            req.files.attachments.forEach((attachment) => {
+        if (files?.attachments?.length) {
+            files.attachments.forEach((attachment) => {
                 messageFiles.push({
                     url: getStaticFilePath(req, attachment.filename),
                     localPath: getLocalPath(attachment.filename),

@@ -8,7 +8,7 @@ export interface MulterRequest<T = any> extends Request {
     user?: IUser;
     body: T;
     files?: {
-        attachments: Express.Multer.File[];
+        attachments?: Express.Multer.File[];
     };
 }
 
