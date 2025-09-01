@@ -7,12 +7,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // Make it generic over any Request type
-const errorHandler: ErrorRequestHandler = (
-    err: unknown,
-    req: Request,
-    res: Response,
-    next: NextFunction
-) => {
+const errorHandler: ErrorRequestHandler = (err: unknown, req: Request, res: Response) => {
     let error: any = err as ApiError;
 
     if (!(error instanceof ApiError)) {

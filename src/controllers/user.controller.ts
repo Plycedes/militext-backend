@@ -201,7 +201,7 @@ export const getCurrentUser = asyncHandler(
 
 export const updateUserAvatar = asyncHandler(
     async (req: MulterRequest, res: Response): Promise<Response> => {
-        const avatarLocalPath = req.file?.path;
+        const avatarLocalPath = req.files?.attachments[0]?.path;
 
         if (!avatarLocalPath) {
             throw new ApiError(400, "Avatar file is missing");

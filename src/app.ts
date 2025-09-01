@@ -19,11 +19,7 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
 
-app.get("/", (req: Request, res: Response) => {
-    res.status(200).send({ status: "OK" });
-});
-
-app.get("/api/v1/", (req: Request, res: Response) => {
+app.get("/", (_: Request, res: Response) => {
     res.status(200).send({ status: "OK" });
 });
 
