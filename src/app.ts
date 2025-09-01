@@ -28,9 +28,11 @@ app.get("/api/v1/", (req: Request, res: Response) => {
 });
 
 import userRouter from "./routers/user.router";
+import chatRouter from "./routers/chat.router";
 import { errorHandler } from "./middlewares/error.middleware";
 
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/chats", chatRouter);
 
 app.use(errorHandler);
 

@@ -3,7 +3,7 @@ import { Chat } from "../models/chat.model";
 import { ChatMessage, IMessage } from "../models/message.model";
 import { removeLocalFile } from "../utils/helpers";
 import { asyncHandler } from "../utils/asyncHandler";
-import { AuthRequest, CustomRequest } from "../middlewares/auth.middleware";
+import { AuthRequest } from "../middlewares/auth.middleware";
 import { IUser, User } from "../models/user.model";
 import { ApiResponse } from "../utils/ApiResponse";
 import { Response } from "express";
@@ -95,7 +95,7 @@ export const searchAvailableUsers = asyncHandler(
             {
                 $match: {
                     _id: {
-                        $ne: req.user._id,
+                        $ne: req.user!._id,
                     },
                 },
             },
@@ -119,7 +119,7 @@ export const createOrGetAOneOnOneChat = asyncHandler(async (req: AuthRequest, re
 
     if (!receiver) throw new ApiError(404, "Receiver does not exist");
 
-    if (receiver._id.toString() === req.user._id.toString()) {
+    if (receiver._id.toString() === req.user!._id.toString()) {
         throw new ApiError(400, "You cannot chat with yourself");
     }
 
@@ -129,7 +129,7 @@ export const createOrGetAOneOnOneChat = asyncHandler(async (req: AuthRequest, re
                 isGroupChat: false,
                 $and: [
                     {
-                        participants: { $elemMatch: { $eq: req.user._id } },
+                        participants: { $elemMatch: { $eq: req.user!._id } },
                     },
                     {
                         participants: {
@@ -148,8 +148,8 @@ export const createOrGetAOneOnOneChat = asyncHandler(async (req: AuthRequest, re
 
     const newChatInstance = await Chat.create({
         name: "One on one chat",
-        participants: [req.user._id, new mongoose.Types.ObjectId(receiverId)],
-        admin: req.user._id,
+        participants: [req.user!._id, new mongoose.Types.ObjectId(receiverId)],
+        admin: req.user!._id,
     });
 
     const createdChat = await Chat.aggregate([
@@ -168,7 +168,7 @@ export const createOrGetAOneOnOneChat = asyncHandler(async (req: AuthRequest, re
     }
 
     payload?.participants?.forEach((participant: IUser) => {
-        if (participant._id.toString() === req.user._id.toString()) return;
+        if (participant._id.toString() === req.user!._id.toString()) return;
         emitSocketEvent(req, participant._id?.toString(), ChatEventEnum.NEW_CHAT_EVENT, payload);
     });
 
@@ -178,11 +178,11 @@ export const createOrGetAOneOnOneChat = asyncHandler(async (req: AuthRequest, re
 export const createAGroupChat = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { name, participants } = req.body as { name: string; participants: string[] };
 
-    if (participants.includes(req.user._id.toString())) {
+    if (participants.includes(req.user!._id.toString())) {
         throw new ApiError(400, "Participants array should not contain the group creator");
     }
 
-    const members = [...new Set([...participants, req.user._id.toString()])];
+    const members = [...new Set([...participants, req.user!._id.toString()])];
 
     if (members.length < 3) {
         throw new ApiError(400, "Seems like you have passed duplicate participants");
@@ -192,7 +192,7 @@ export const createAGroupChat = asyncHandler(async (req: AuthRequest, res: Respo
         name,
         isGroupChat: true,
         participants: members,
-        admin: req.user._id,
+        admin: req.user!._id,
     });
 
     const chat = await Chat.aggregate([
@@ -211,7 +211,7 @@ export const createAGroupChat = asyncHandler(async (req: AuthRequest, res: Respo
     }
 
     payload?.participants?.forEach((participants: IUser) => {
-        if (participants._id.toString() === req.user._id.toString()) return;
+        if (participants._id.toString() === req.user!._id.toString()) return;
         emitSocketEvent(req, participants._id?.toString(), ChatEventEnum.NEW_CHAT_EVENT, payload);
     });
 
@@ -252,7 +252,7 @@ export const renameGroupChat = asyncHandler(async (req: AuthRequest, res: Respon
         throw new ApiError(404, "Group chat does not exist");
     }
 
-    if (groupChat.admin?.toString() !== req.user._id?.toString()) {
+    if (groupChat.admin?.toString() !== req.user!._id?.toString()) {
         throw new ApiError(404, "You are not an admin");
     }
 
@@ -314,7 +314,7 @@ export const deleteGroupChat = asyncHandler(async (req: AuthRequest, res: Respon
         throw new ApiError(404, "Group chat does not exist");
     }
 
-    if (chat.admin?.toString() !== req.user._id?.toString()) {
+    if (chat.admin?.toString() !== req.user!._id?.toString()) {
         throw new ApiError(404, "Only admin can delete the group");
     }
 
@@ -323,7 +323,7 @@ export const deleteGroupChat = asyncHandler(async (req: AuthRequest, res: Respon
     await deleteCascadeChatMessages(chatId);
 
     chat?.participants?.forEach((participant: IUser) => {
-        if (participant._id.toString() === req.user._id.toString()) return;
+        if (participant._id.toString() === req.user!._id.toString()) return;
         emitSocketEvent(req, participant._id?.toString(), ChatEventEnum.LEAVE_CHAT_EVENT, chat);
     });
 
@@ -354,7 +354,7 @@ export const deleteOneOnOneChat = asyncHandler(async (req: AuthRequest, res: Res
 
     const otherParticipant = payload?.participants?.find(
         (participant: IUser & { _id: Types.ObjectId }) =>
-            participant?._id.toString() !== req.user._id.toString()
+            participant?._id.toString() !== req.user!._id.toString()
     );
 
     if (otherParticipant) {
@@ -383,7 +383,7 @@ export const leaveGroupChat = asyncHandler(async (req: AuthRequest, res: Respons
 
     const existingParticipants: Types.ObjectId[] = groupChat.participants as Types.ObjectId[];
 
-    if (!existingParticipants?.some((id) => id.toString() === req.user._id.toString())) {
+    if (!existingParticipants?.some((id) => id.toString() === req.user!._id.toString())) {
         throw new ApiError(400, "You are not a part of this group chat");
     }
 
@@ -428,7 +428,7 @@ export const addNewParticipantInGroupChat = asyncHandler(
             throw new ApiError(404, "Group chat does not exists");
         }
 
-        if (groupChat.admin?.toString() !== req.user._id?.toString()) {
+        if (groupChat.admin?.toString() !== req.user!._id?.toString()) {
             throw new ApiError(403, "You are not an admin");
         }
 
@@ -482,7 +482,7 @@ export const removeParticipantFromGroupChat = asyncHandler(
             throw new ApiError(404, "Group chat does not exist");
         }
 
-        if (!groupChat.admin?.toString() !== req.user.id?.toString()) {
+        if (!groupChat.admin?.toString() !== req.user!.id?.toString()) {
             throw new ApiError(404, "You are not an admin");
         }
 
@@ -527,7 +527,7 @@ export const getAllChats = asyncHandler(async (req: AuthRequest, res: Response) 
     const chats = await Chat.aggregate([
         {
             $match: {
-                participants: { $elemMatch: { $eq: req.user._id } },
+                participants: { $elemMatch: { $eq: req.user!._id } },
             },
         },
         {
