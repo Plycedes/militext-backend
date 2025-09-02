@@ -32,8 +32,9 @@ const mountParticipantStoppedTypingEvent = (socket: AuthenticatedSocket): void =
 const initializeSocketIO = (io: Server) => {
     io.on("connection", async (socket: AuthenticatedSocket) => {
         try {
-            const cookies = cookie.parse(socket.handshake.headers?.cookie || "");
-            let token = cookies?.accessToken || socket.handshake.auth?.token;
+            // const cookies = cookie.parse(socket.handshake.headers?.cookie || "");
+            // let token = cookies?.accessToken || socket.handshake.auth?.token;
+            let token = socket.handshake.auth?.token;
 
             if (!token) {
                 throw new ApiError(401, "Un-authorized handshake. Token is missing");
@@ -82,6 +83,7 @@ const emitSocketEvent = (
     event: (typeof AvailableChatEvents)[0],
     payload: any
 ) => {
+    // console.log(`Emitting \nevent: ${event} \nroomId: ${roomId} \npayload: ${payload}`);
     req.app.get("io").in(roomId).emit(event, payload);
 };
 
