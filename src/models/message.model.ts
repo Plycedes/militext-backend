@@ -43,4 +43,4 @@ const messageSchema = new Schema<IMessage>(
     { timestamps: true }
 );
 
-export const ChatMessage: Model<IMessage> = mongoose.model<IMessage>("Chat", messageSchema);
+export const ChatMessage: Model<IMessage> = mongoose.model<IMessage>("ChatMessage", messageSchema);

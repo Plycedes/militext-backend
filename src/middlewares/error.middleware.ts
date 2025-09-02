@@ -7,12 +7,17 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // Make it generic over any Request type
-const errorHandler: ErrorRequestHandler = (err: unknown, req: Request, res: Response) => {
+const errorHandler: ErrorRequestHandler = (
+    err: unknown,
+    req: Request,
+    res: Response,
+    next: NextFunction
+) => {
     let error: any = err as ApiError;
 
     if (!(error instanceof ApiError)) {
         const statusCode = error instanceof mongoose.Error ? 400 : 500;
-        const message = (error as Error).message || "Something went wrong";
+        const message = (error as Error).message || "Error: Something went wrong";
 
         error = new ApiError(
             statusCode,
