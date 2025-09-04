@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
-import connectDB from "./db";
+import connectDB from "./config/db";
 import { httpServer } from "./app";
 
 dotenv.config();

@@ -43,13 +43,13 @@ const generateAccessAndRefreshTokens = async (userId: string): Promise<JsonObjec
 export class UserController {
     static registerUser = asyncHandler(
         async (req: CustomRequest<RegisterRequestBody>, res: Response): Promise<Response> => {
-            const { email, username, password } = req.body;
+            const { email, username, number, password } = req.body;
 
-            if ([email, username, password].some((field) => field?.trim() === "")) {
+            if ([email, username, number, password].some((field) => field?.trim() === "")) {
                 throw new ApiError(400, "No field can be empty");
             }
 
-            const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+            const existingUser = await User.findOne({ $or: [{ username }, { number }, { email }] });
 
             if (existingUser) {
                 throw new ApiError(409, "Username or Email already exists");
@@ -63,6 +63,7 @@ export class UserController {
             const user = await User.create({
                 username,
                 email,
+                number,
                 password,
                 avatar: pfp.url,
                 avatarId: pfp.public_id,
@@ -82,13 +83,15 @@ export class UserController {
 
     static loginUser = asyncHandler(
         async (req: CustomRequest<LoginRequestBody>, res: Response): Promise<Response> => {
-            const { email, username, password } = req.body;
+            const { email, username, number, password } = req.body;
 
-            if (!username && !email) {
-                throw new ApiError(400, "Username or email is required");
+            if (!username && !email && !number) {
+                throw new ApiError(400, "Username or email or number is required");
             }
 
-            const user = (await User.findOne({ $or: [{ username }, { email }] })) as IUser;
+            const user = (await User.findOne({
+                $or: [{ username }, { email }, { number }],
+            })) as IUser;
 
             if (!user) {
                 throw new ApiError(404, "User not registered");

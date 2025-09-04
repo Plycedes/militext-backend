@@ -3,12 +3,14 @@ import { ParsedQs } from "qs";
 export interface RegisterRequestBody {
     email: string;
     username: string;
+    number: string;
     password: string;
 }
 
 export interface LoginRequestBody {
     email?: string;
     username?: string;
+    number?: string;
     password: string;
 }
 
