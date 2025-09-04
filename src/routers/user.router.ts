@@ -16,5 +16,6 @@ router.get("/current-user", UserController.getCurrentUser);
 
 router.post("/logout", UserController.logoutUser);
 router.post("/change-password", UserController.changeCurrentPassword);
+router.post("/reset-password", UserController.resetPassword);
 router.post("/update-avatar", upload.single("avatar"), UserController.updateUserAvatar);
 export default router;

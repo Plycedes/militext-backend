@@ -18,6 +18,7 @@ export interface IUser extends Document {
     isPasswordCorrect(password: string): Promise<boolean>;
     generateAccessToken(): string;
     generateRefreshToken(): string;
+    generateResetToken(): string;
 }
 
 const userSchema = new Schema<IUser>(
@@ -85,7 +86,7 @@ userSchema.methods.generateAccessToken = function (): string {
     }
 
     const options: jwt.SignOptions = {
-        expiresIn: "1d",
+        expiresIn: "7d",
     };
 
     return jwt.sign(payload, secret, options);
@@ -104,9 +105,25 @@ userSchema.methods.generateRefreshToken = function (): string {
     }
 
     const options: jwt.SignOptions = {
-        expiresIn: "10d",
+        expiresIn: "30d",
     };
 
+    return jwt.sign(payload, secret, options);
+};
+
+userSchema.methods.generateResetToken = function (): string {
+    const payload: JsonObject = {
+        _id: (this._id as Types.ObjectId).toString(),
+        email: this.email,
+        username: this.username,
+    };
+    const secret = process.env.ACCESS_TOKEN_SECRET as string;
+    if (!secret) {
+        throw new Error("Reset token secret is not defined in environment variables");
+    }
+    const options: jwt.SignOptions = {
+        expiresIn: "15m",
+    };
     return jwt.sign(payload, secret, options);
 };
 

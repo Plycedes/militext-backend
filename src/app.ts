@@ -39,11 +39,13 @@ app.get("/", (_: Request, res: Response) => {
 import userRouter from "./routers/user.router";
 import chatRouter from "./routers/chat.router";
 import messageRouter from "./routers/message.router";
+import emailRouter from "./routers/email.router";
 import { errorHandler } from "./middlewares/error.middleware";
 
 app.use("/api/v1/users", userRouter);
-app.use("/api/v1/chat-app/chats", chatRouter);
-app.use("/api/v1/chat-app/messages", messageRouter);
+app.use("/api/v1/chats", chatRouter);
+app.use("/api/v1/emails", emailRouter);
+app.use("/api/v1/messages", messageRouter);
 
 initializeSocketIO(io);
 

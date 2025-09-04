@@ -1,10 +1,10 @@
 import jwt from "jsonwebtoken";
 import { Types } from "mongoose";
-import { Response } from "express";
+import { Response, Request } from "express";
 
 import { User, IUser } from "../models/user.model";
 import { MulterRequest } from "../middlewares/multer.middleware";
-import { CustomRequest } from "../middlewares/auth.middleware";
+import { AuthRequest, CustomRequest } from "../middlewares/auth.middleware";
 
 import { ApiError } from "../utils/ApiError";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -201,6 +201,24 @@ export class UserController {
             await user.save({ validateBeforeSave: false });
 
             return res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"));
+        }
+    );
+
+    static resetPassword = asyncHandler(
+        async (req: AuthRequest, res: Response): Promise<Response> => {
+            const { newPassword } = req.body;
+
+            if (!newPassword) {
+                throw new ApiError(400, "New password is required");
+            }
+
+            const user = (await User.findById(req.user?._id)) as IUser;
+            if (!user) throw new ApiError(404, "User not found");
+
+            user.password = newPassword;
+            await user.save({ validateBeforeSave: false });
+
+            return res.status(200).json(new ApiResponse(200, {}, "Password reset successful"));
         }
     );
 
