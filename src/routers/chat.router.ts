@@ -10,7 +10,10 @@ router.route("/").get(ChatController.getAllChats);
 
 router.route("/users").get(ChatController.searchAvailableUsers);
 
-router.route("/c/:receiverId").post(ChatController.createOrGetAOneOnOneChat);
+router
+    .route("/c/:receiverId")
+    .get(ChatController.getAOneOnOneChat)
+    .post(ChatController.createAOneOnOneChat);
 
 router.route("/group").post(ChatController.createAGroupChat);
 
@@ -21,7 +24,7 @@ router
     .delete(ChatController.deleteGroupChat);
 
 router
-    .route("/group/:chatId/:participantId")
+    .route("/group/:chatId/:participantNum")
     .post(ChatController.addNewParticipantInGroupChat)
     .delete(ChatController.removeParticipantFromGroupChat);
 

@@ -10,6 +10,7 @@ export interface IUser extends Document {
     _id: Types.ObjectId;
     username: string;
     email: string;
+    number: string;
     avatar: string;
     avatarId: string;
     password: string;
@@ -35,6 +36,12 @@ const userSchema = new Schema<IUser>(
             unique: true,
             lowercase: true,
             trim: true,
+        },
+        number: {
+            type: String,
+            required: true,
+            unique: true,
+            index: true,
         },
         avatar: {
             type: String,

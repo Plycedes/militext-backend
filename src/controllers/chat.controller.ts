@@ -113,7 +113,7 @@ export class ChatController {
         }
     );
 
-    static createOrGetAOneOnOneChat = asyncHandler(async (req: AuthRequest, res: Response) => {
+    static getAOneOnOneChat = asyncHandler(async (req: AuthRequest, res: Response) => {
         const { receiverId } = req.params;
 
         const receiver = await User.findById(receiverId);
@@ -121,7 +121,7 @@ export class ChatController {
         if (!receiver) throw new ApiError(404, "Receiver does not exist");
 
         if (receiver._id.toString() === req.user!._id.toString()) {
-            throw new ApiError(400, "You cannot chat with yourself");
+            throw new ApiError(400, "You cannot link with yourself");
         }
 
         const chat = await Chat.aggregate([
@@ -147,11 +147,25 @@ export class ChatController {
             return res
                 .status(200)
                 .json(new ApiResponse(200, chat[0], "Chat retreived successfully"));
+        } else {
+            throw new ApiError(404, "Users not linked");
+        }
+    });
+
+    static createAOneOnOneChat = asyncHandler(async (req: AuthRequest, res: Response) => {
+        const { receiverId: receiverNum } = req.params;
+
+        const participant = await User.findOne({ number: receiverNum });
+        if (!participant) {
+            throw new ApiError(404, "Number not registered on the Grid");
+        }
+        if (req.user!._id.toString() === participant._id.toString()) {
+            throw new ApiError(404, "You cannot link with yourself");
         }
 
         const newChatInstance = await Chat.create({
             name: "One on one chat",
-            participants: [req.user!._id, new mongoose.Types.ObjectId(receiverId)],
+            participants: [req.user!._id, participant._id],
             admin: req.user!._id,
         });
 
@@ -180,11 +194,15 @@ export class ChatController {
             );
         });
 
-        return res.status(201).json(new ApiResponse(201, payload, "Chat retreived successfully"));
+        return res.status(201).json(new ApiResponse(201, payload, "Linked successfully"));
     });
 
     static createAGroupChat = asyncHandler(async (req: AuthRequest, res: Response) => {
-        const { name, participants } = req.body as { name: string; participants: string[] };
+        const { name, numbers } = req.body as { name: string; numbers: string[] };
+
+        const participants: string[] = await User.find({ number: { $in: numbers } }).then((users) =>
+            users.map((user) => user._id.toString())
+        );
 
         if (participants.includes(req.user!._id.toString())) {
             throw new ApiError(400, "Participants array should not contain the group creator");
@@ -431,7 +449,14 @@ export class ChatController {
     });
 
     static addNewParticipantInGroupChat = asyncHandler(async (req: AuthRequest, res: Response) => {
-        const { chatId, participantId } = req.params;
+        const { chatId, participantNum } = req.params;
+
+        const participantId: string | null | undefined = await User.findOne({
+            number: participantNum,
+        }).then((user) => user?.number);
+        if (!participantId) {
+            throw new ApiError(404, "Number not found on the Grid");
+        }
 
         const groupChat = await Chat.findOne({
             _id: new mongoose.Types.ObjectId(chatId),
@@ -484,7 +509,8 @@ export class ChatController {
 
     static removeParticipantFromGroupChat = asyncHandler(
         async (req: AuthRequest, res: Response) => {
-            const { chatId, participantId } = req.params;
+            const { chatId, participantNum } = req.params;
+            const participantId = participantNum;
 
             const groupChat = await Chat.findOne({
                 _id: new mongoose.Types.ObjectId(chatId),
