@@ -10,6 +10,7 @@ import { Response } from "express";
 import { ApiError } from "../utils/ApiError";
 import { emitSocketEvent } from "../socket";
 import { ChatEventEnum } from "../constants";
+import { UserChat } from "../models/userChat.model";
 
 const chatCommonAggregation = (): PipelineStage[] => [
     {
@@ -152,6 +153,7 @@ export class ChatController {
         }
     });
 
+    // ---------------- One-on-one chat ----------------
     static createAOneOnOneChat = asyncHandler(async (req: AuthRequest, res: Response) => {
         const { receiverId: receiverNum } = req.params;
 
@@ -163,40 +165,47 @@ export class ChatController {
             throw new ApiError(404, "You cannot link with yourself");
         }
 
+        // 1. Create chat
         const newChatInstance = await Chat.create({
             name: "One on one chat",
             participants: [req.user!._id, participant._id],
             admin: req.user!._id,
         });
 
+        // 2. Create UserChat entries for participants
+        const members = [req.user!._id, participant._id];
+        await Promise.all(
+            members.map((userId) =>
+                UserChat.create({
+                    chatId: newChatInstance._id,
+                    userId,
+                    lastRead: new Date(),
+                    unreadCount: 0,
+                })
+            )
+        );
+
+        // 3. Return aggregated chat payload
         const createdChat = await Chat.aggregate([
-            {
-                $match: {
-                    _id: newChatInstance._id,
-                },
-            },
+            { $match: { _id: newChatInstance._id } },
             ...chatCommonAggregation(),
         ]);
 
         const payload = createdChat[0];
-
         if (!payload) {
             throw new ApiError(500, "Internal server error");
         }
 
-        payload?.participants?.forEach((participant: IUser) => {
-            if (participant._id.toString() === req.user!._id.toString()) return;
-            emitSocketEvent(
-                req,
-                participant._id?.toString(),
-                ChatEventEnum.NEW_CHAT_EVENT,
-                payload
-            );
+        // 4. Emit socket events
+        payload?.participants?.forEach((p: IUser) => {
+            if (p._id.toString() === req.user!._id.toString()) return;
+            emitSocketEvent(req, p._id?.toString(), ChatEventEnum.NEW_CHAT_EVENT, payload);
         });
 
         return res.status(201).json(new ApiResponse(201, payload, "Linked successfully"));
     });
 
+    // ---------------- Group chat ----------------
     static createAGroupChat = asyncHandler(async (req: AuthRequest, res: Response) => {
         const { name, numbers } = req.body as { name: string; numbers: string[] };
 
@@ -214,6 +223,7 @@ export class ChatController {
             throw new ApiError(400, "Seems like you have passed duplicate participants");
         }
 
+        // 1. Create group chat
         const groupChat = await Chat.create({
             name,
             isGroupChat: true,
@@ -221,29 +231,33 @@ export class ChatController {
             admin: req.user!._id,
         });
 
+        // 2. Create UserChat entries for participants
+        await Promise.all(
+            members.map((userId) =>
+                UserChat.create({
+                    chatId: groupChat._id,
+                    userId,
+                    lastRead: new Date(),
+                    unreadCount: 0,
+                })
+            )
+        );
+
+        // 3. Return aggregated chat payload
         const chat = await Chat.aggregate([
-            {
-                $match: {
-                    _id: groupChat._id,
-                },
-            },
+            { $match: { _id: groupChat._id } },
             ...chatCommonAggregation(),
         ]);
 
         const payload = chat[0];
-
         if (!payload) {
             throw new ApiError(500, "Internal server error");
         }
 
-        payload?.participants?.forEach((participants: IUser) => {
-            if (participants._id.toString() === req.user!._id.toString()) return;
-            emitSocketEvent(
-                req,
-                participants._id?.toString(),
-                ChatEventEnum.NEW_CHAT_EVENT,
-                payload
-            );
+        // 4. Emit socket events
+        payload?.participants?.forEach((p: IUser) => {
+            if (p._id.toString() === req.user!._id.toString()) return;
+            emitSocketEvent(req, p._id?.toString(), ChatEventEnum.NEW_CHAT_EVENT, payload);
         });
 
         return res

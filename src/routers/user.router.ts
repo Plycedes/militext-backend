@@ -7,10 +7,9 @@ const router: Router = Router();
 
 router.post("/register", UserController.registerUser);
 router.post("/login", UserController.loginUser);
+router.post("/refresh-token", UserController.refreshAccessToken);
 
 router.use(verifyJWT);
-
-router.post("/refresh-token", UserController.refreshAccessToken);
 
 router.get("/current-user", UserController.getCurrentUser);
 
