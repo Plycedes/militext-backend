@@ -72,6 +72,71 @@ const chatCommonAggregation = (): PipelineStage[] => [
     },
 ];
 
+const chatCommonAggregation2 = (currentUserId: mongoose.Types.ObjectId): PipelineStage[] => [
+    {
+        $lookup: {
+            from: "users",
+            foreignField: "_id",
+            localField: "participants",
+            as: "participants",
+            pipeline: [
+                {
+                    $match: {
+                        _id: { $ne: currentUserId }, // 🚀 exclude current user
+                    },
+                },
+                {
+                    $project: {
+                        password: 0,
+                        refreshToken: 0,
+                        forgotPasswordToken: 0,
+                        forgotPasswordExpiry: 0,
+                        emailVerificationToken: 0,
+                        emailVerificationExpiry: 0,
+                    },
+                },
+            ],
+        },
+    },
+    {
+        $lookup: {
+            from: "chatmessages",
+            foreignField: "_id",
+            localField: "lastMessage",
+            as: "lastMessage",
+            pipeline: [
+                {
+                    $lookup: {
+                        from: "users",
+                        foreignField: "_id",
+                        localField: "sender",
+                        as: "sender",
+                        pipeline: [
+                            {
+                                $project: {
+                                    username: 1,
+                                    avatar: 1,
+                                    email: 1,
+                                },
+                            },
+                        ],
+                    },
+                },
+                {
+                    $addFields: {
+                        sender: { $first: "$sender" },
+                    },
+                },
+            ],
+        },
+    },
+    {
+        $addFields: {
+            lastMessage: { $first: "$lastMessage" },
+        },
+    },
+];
+
 const deleteCascadeChatMessages = async (chatId: string | Types.ObjectId): Promise<void> => {
     const messages: IMessage[] = await ChatMessage.find({
         chat: new mongoose.Types.ObjectId(chatId),
@@ -141,7 +206,7 @@ export class ChatController {
                     ],
                 },
             },
-            ...chatCommonAggregation(),
+            ...chatCommonAggregation2(req.user!._id),
         ]);
 
         if (chat.length) {
@@ -188,7 +253,7 @@ export class ChatController {
         // 3. Return aggregated chat payload
         const createdChat = await Chat.aggregate([
             { $match: { _id: newChatInstance._id } },
-            ...chatCommonAggregation(),
+            ...chatCommonAggregation2(req.user!._id),
         ]);
 
         const payload = createdChat[0];
