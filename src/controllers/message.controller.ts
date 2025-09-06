@@ -58,7 +58,8 @@ export class MessageController {
         }
 
         // 🔹 Step 1: Fetch userChat to get lastReadAt
-        const userChat = await UserChat.findOne({ chat: chatId, user: userId });
+        const userChat = await UserChat.findOne({ chatId, userId });
+        const lastRead = userChat?.lastRead;
 
         // 🔹 Step 2: Fetch messages before updating lastReadAt
         const messages = await ChatMessage.aggregate([
@@ -87,7 +88,7 @@ export class MessageController {
                 200,
                 {
                     messages: messages || [],
-                    lastReadAt: userChat?.lastRead || null, // frontend can use this to draw "New Messages" divider
+                    lastRead, // frontend can use this to draw "New Messages" divider
                 },
                 "Messages fetched successfully"
             )

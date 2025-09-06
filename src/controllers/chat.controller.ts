@@ -602,8 +602,8 @@ export class ChatController {
                             $match: {
                                 $expr: {
                                     $and: [
-                                        { $eq: ["$chat", "$$chatId"] },
-                                        { $eq: ["$user", userId] },
+                                        { $eq: ["$chatId", "$$chatId"] },
+                                        { $eq: ["$userId", userId] },
                                     ],
                                 },
                             },
@@ -611,7 +611,7 @@ export class ChatController {
                         {
                             $project: {
                                 unreadCount: 1,
-                                lastReadAt: 1,
+                                lastRead: 1,
                             },
                         },
                     ],
