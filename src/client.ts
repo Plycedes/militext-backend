@@ -2,14 +2,17 @@ import { io, Socket } from "socket.io-client";
 import readline from "readline";
 import { ChatEventEnum } from "./constants";
 
-const SERVER_URL = "http://localhost:8000"; // change if needed
+const SERVER_URL = "http://localhost:8000";
+
+// netwatch
 // const TOKEN =
 //     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGI5NDVmOGIyMzcxNWFiZDBjMGE2NWUiLCJlbWFpbCI6ImJsYWNrc3RlZWxlbXBlcm9yQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoic3RlZWwiLCJpYXQiOjE3NTcxODM1MDEsImV4cCI6MTc1NzI2OTkwMX0.H_xbVnWkJRAiRpo_pyIA9QyLTQoOamUCWiw4QcHXMQg"; // valid JWT from your auth system
 
+// steel
 const TOKEN =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGJjMjIwNTBiYjQ5NjAzYzhlZTk3ZjIiLCJlbWFpbCI6InlhYmhheTM4MEBnbWFpbC5jb20iLCJ1c2VybmFtZSI6Im5ldHdhdGNoIiwiaWF0IjoxNzU3MTgzOTIyLCJleHAiOjE3NTcyNzAzMjJ9.ZCsREurFZi2eBkhVf26xC4TkLNkegmPnt56YeXcVa1c";
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGI5NDVmOGIyMzcxNWFiZDBjMGE2NWUiLCJlbWFpbCI6ImJsYWNrc3RlZWxlbXBlcm9yQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoic3RlZWwiLCJpYXQiOjE3NTcxODk2NTQsImV4cCI6MTc1NzI3NjA1NH0.iwnSleHxFgzIqSOowbjQAPBiNRqstIuupY6StWHRHKs";
 
-const CHAT_ID = "68bc7cba5178b598bbdd43a5"; // a valid chat id
+const CHAT_ID = "68bc7cba5178b598bbdd43a5";
 
 let socket: Socket;
 

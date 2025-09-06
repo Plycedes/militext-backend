@@ -62,7 +62,7 @@ const mountMessageEvent = (io: Server, socket: AuthenticatedSocket): void => {
                 const isOnlineInChat = onlineUserIds.includes(participantId.toString());
                 const isSender = participantId.toString() === socket.user!._id.toString();
 
-                const userChat = await UserChat.findOne({ chat: chatId, user: participantId });
+                const userChat = await UserChat.findOne({ chatId: chatId, userId: participantId });
 
                 if (!userChat) return;
 
@@ -75,6 +75,10 @@ const mountMessageEvent = (io: Server, socket: AuthenticatedSocket): void => {
                 } else {
                     // For offline/not in room: increment unread
                     userChat.unreadCount += 1;
+                    io.to(participantId.toString()).emit(
+                        ChatEventEnum.NEW_MESSAGE_EVENT,
+                        populatedMessage
+                    );
                 }
                 await userChat.save();
             })
