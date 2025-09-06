@@ -578,10 +578,12 @@ export class ChatController {
     );
 
     static getAllChats = asyncHandler(async (req: AuthRequest, res: Response) => {
+        const userId = req.user!._id;
+
         const chats = await Chat.aggregate([
             {
                 $match: {
-                    participants: { $elemMatch: { $eq: req.user!._id } },
+                    participants: { $elemMatch: { $eq: userId } },
                 },
             },
             {
@@ -590,6 +592,38 @@ export class ChatController {
                 },
             },
             ...chatCommonAggregation(),
+            // 🔗 Join with UserChat
+            {
+                $lookup: {
+                    from: "userchats", // collection name
+                    let: { chatId: "$_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$chat", "$$chatId"] },
+                                        { $eq: ["$user", userId] },
+                                    ],
+                                },
+                            },
+                        },
+                        {
+                            $project: {
+                                unreadCount: 1,
+                                lastReadAt: 1,
+                            },
+                        },
+                    ],
+                    as: "userChat",
+                },
+            },
+            {
+                $unwind: {
+                    path: "$userChat",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
         ]);
 
         return res

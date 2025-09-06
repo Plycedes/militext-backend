@@ -10,6 +10,7 @@ import { MulterRequest } from "../middlewares/multer.middleware";
 import { getLocalPath, getStaticFilePath, removeLocalFile } from "../utils/helpers";
 import { emitSocketEvent } from "../socket";
 import { ChatEventEnum } from "../constants";
+import { UserChat } from "../models/userChat.model";
 
 type AttachmentRequest = Request & {
     files?: { attachments?: Express.Multer.File[] };
@@ -45,17 +46,21 @@ const chatMessageCommonAggregation = (): PipelineStage[] => {
 export class MessageController {
     static getAllMessages = asyncHandler(async (req: AuthRequest, res: Response) => {
         const { chatId } = req.params;
+        const userId = req.user!._id;
 
         const selectedChat = await Chat.findById(chatId);
-
         if (!selectedChat) {
-            throw new ApiError(404, "Chat does not exits");
+            throw new ApiError(404, "Chat does not exist");
         }
 
-        if (!selectedChat.participants?.includes(req.user!._id)) {
+        if (!selectedChat.participants?.includes(userId)) {
             throw new ApiError(400, "User is not a part of this chat");
         }
 
+        // 🔹 Step 1: Fetch userChat to get lastReadAt
+        const userChat = await UserChat.findOne({ chat: chatId, user: userId });
+
+        // 🔹 Step 2: Fetch messages before updating lastReadAt
         const messages = await ChatMessage.aggregate([
             {
                 $match: {
@@ -65,14 +70,28 @@ export class MessageController {
             ...chatMessageCommonAggregation(),
             {
                 $sort: {
-                    createdAt: -1,
+                    createdAt: 1, // ascending so frontend can easily split unread section
                 },
             },
         ]);
 
-        return res
-            .status(200)
-            .json(new ApiResponse(200, messages || [], "Message fetched successfully"));
+        // 🔹 Step 3: Mark messages as read (update lastReadAt + reset unreadCount)
+        if (userChat) {
+            userChat.lastRead = new Date();
+            userChat.unreadCount = 0;
+            await userChat.save();
+        }
+
+        return res.status(200).json(
+            new ApiResponse(
+                200,
+                {
+                    messages: messages || [],
+                    lastReadAt: userChat?.lastRead || null, // frontend can use this to draw "New Messages" divider
+                },
+                "Messages fetched successfully"
+            )
+        );
     });
 
     static sendMessage = asyncHandler(async (req: MulterRequest, res: Response) => {
