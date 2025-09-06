@@ -17,6 +17,7 @@ export const ChatEventEnum = {
     STOP_TYPING_EVENT: "stopTyping",
     TYPING_EVENT: "typing",
     MESSAGE_DELETE_EVENT: "messageDeleted",
+    NEW_MESSAGE_EVENT: "newMessage",
 } as const;
 
 export const AvailableChatEvents = Object.values(ChatEventEnum);

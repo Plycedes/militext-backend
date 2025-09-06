@@ -1,0 +1,131 @@
+import { io, Socket } from "socket.io-client";
+import readline from "readline";
+import { ChatEventEnum } from "./constants";
+
+const SERVER_URL = "http://localhost:8000"; // change if needed
+// const TOKEN =
+//     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGI5NDVmOGIyMzcxNWFiZDBjMGE2NWUiLCJlbWFpbCI6ImJsYWNrc3RlZWxlbXBlcm9yQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoic3RlZWwiLCJpYXQiOjE3NTcxODM1MDEsImV4cCI6MTc1NzI2OTkwMX0.H_xbVnWkJRAiRpo_pyIA9QyLTQoOamUCWiw4QcHXMQg"; // valid JWT from your auth system
+
+const TOKEN =
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGJjMjIwNTBiYjQ5NjAzYzhlZTk3ZjIiLCJlbWFpbCI6InlhYmhheTM4MEBnbWFpbC5jb20iLCJ1c2VybmFtZSI6Im5ldHdhdGNoIiwiaWF0IjoxNzU3MTgzOTIyLCJleHAiOjE3NTcyNzAzMjJ9.ZCsREurFZi2eBkhVf26xC4TkLNkegmPnt56YeXcVa1c";
+
+const CHAT_ID = "68bc7cba5178b598bbdd43a5"; // a valid chat id
+
+let socket: Socket;
+
+// readline setup for interactive menu
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+});
+
+// --- Socket Setup ---
+function connectClient() {
+    socket = io(SERVER_URL, {
+        auth: { token: TOKEN },
+    });
+
+    socket.on("connect", () => {
+        console.log("✅ Connected to server. Socket ID:", socket.id);
+        printMenu();
+    });
+
+    socket.on(ChatEventEnum.CONNECTED_EVENT, () => {
+        console.log("🟢 Server acknowledged connection");
+    });
+
+    socket.on(ChatEventEnum.NEW_MESSAGE_EVENT, (message) => {
+        console.log("💬 New message received:", message);
+    });
+
+    socket.on(ChatEventEnum.TYPING_EVENT, (chatId) => {
+        console.log("✍️ Someone typing in chat:", chatId);
+    });
+
+    socket.on(ChatEventEnum.STOP_TYPING_EVENT, (chatId) => {
+        console.log("✋ Someone stopped typing in chat:", chatId);
+    });
+
+    socket.on("disconnect", () => {
+        console.log("❌ Disconnected");
+    });
+
+    socket.on(ChatEventEnum.SOCKET_ERROR_EVENT, (err) => {
+        console.error("⚠️ Socket error:", err);
+    });
+}
+
+// --- Chat Actions ---
+function joinChat(chatId: string) {
+    console.log(`➡️ Joining chat ${chatId}`);
+    socket.emit(ChatEventEnum.JOIN_CHAT_EVENT, chatId);
+}
+
+function leaveChat(chatId: string) {
+    console.log(`⬅️ Leaving chat ${chatId}`);
+    socket.emit(ChatEventEnum.LEAVE_CHAT_EVENT, chatId);
+}
+
+function sendMessage(chatId: string, content: string) {
+    console.log(`📤 Sending message to ${chatId}: ${content}`);
+    socket.emit(ChatEventEnum.NEW_MESSAGE_EVENT, { chatId, content });
+}
+
+function startTyping(chatId: string) {
+    console.log(`✍️ You started typing in ${chatId}`);
+    socket.emit(ChatEventEnum.TYPING_EVENT, chatId);
+}
+
+function stopTyping(chatId: string) {
+    console.log(`✋ You stopped typing in ${chatId}`);
+    socket.emit(ChatEventEnum.STOP_TYPING_EVENT, chatId);
+}
+
+// --- Console Menu ---
+function printMenu() {
+    console.log(`
+==== Chat Client Menu ====
+1. Join Chat
+2. Leave Chat
+3. Send Message
+4. Start Typing
+5. Stop Typing
+6. Exit
+===========================
+`);
+    rl.question("Choose an option: ", handleMenuChoice);
+}
+
+function handleMenuChoice(choice: string) {
+    switch (choice.trim()) {
+        case "1":
+            joinChat(CHAT_ID);
+            break;
+        case "2":
+            leaveChat(CHAT_ID);
+            break;
+        case "3":
+            rl.question("Enter message: ", (msg) => {
+                sendMessage(CHAT_ID, msg);
+                printMenu();
+            });
+            return;
+        case "4":
+            startTyping(CHAT_ID);
+            break;
+        case "5":
+            stopTyping(CHAT_ID);
+            break;
+        case "6":
+            console.log("👋 Exiting client...");
+            rl.close();
+            socket.disconnect();
+            return;
+        default:
+            console.log("Invalid choice");
+    }
+    printMenu();
+}
+
+// --- Run ---
+connectClient();

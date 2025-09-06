@@ -7,13 +7,85 @@ import { IUser, User } from "../models/user.model";
 import { ApiError } from "../utils/ApiError";
 import { Request } from "express";
 import { AuthenticatedSocket } from "../types/types";
+import { Chat } from "../models/chat.model";
+import { ChatMessage } from "../models/message.model";
+import { UserChat } from "../models/userChat.model";
+import { Types } from "mongoose";
 
 dotenv.config();
 
 const mountJoinChatEvent = (socket: AuthenticatedSocket): void => {
     socket.on(ChatEventEnum.JOIN_CHAT_EVENT, (chatId: string) => {
-        console.log("User joined the chat", chatId);
+        console.log(`User ${socket.user?._id} joined chat ${chatId}`);
         socket.join(chatId);
+    });
+
+    socket.on(ChatEventEnum.LEAVE_CHAT_EVENT, (chatId: string) => {
+        console.log(`User ${socket.user?._id} left chat ${chatId}`);
+        socket.leave(chatId);
+    });
+};
+
+const mountMessageEvent = (io: Server, socket: AuthenticatedSocket): void => {
+    socket.on(ChatEventEnum.NEW_MESSAGE_EVENT, async ({ chatId, content }) => {
+        if (!socket.user?._id) return;
+
+        // Validate chat
+        const chat = await Chat.findById(chatId);
+        if (!chat) {
+            return socket.emit(ChatEventEnum.SOCKET_ERROR_EVENT, "Chat does not exist");
+        }
+
+        if (!chat.participants.includes(socket.user._id)) {
+            return socket.emit(ChatEventEnum.SOCKET_ERROR_EVENT, "Not a participant of this chat");
+        }
+
+        // Create message in DB
+        const newMessage = await ChatMessage.create({
+            chat: chatId,
+            sender: socket.user._id,
+            content,
+        });
+
+        // Populate sender info for frontend
+        const populatedMessage = await ChatMessage.findById(newMessage._id)
+            .populate("sender", "name number avatar")
+            .lean();
+
+        // Find who is online in this chat (in socket room)
+        const roomSockets = await io.in(chatId).fetchSockets();
+        const onlineUserIds = roomSockets.map((s: any) => s.user?._id.toString());
+
+        // Update unread counts + lastRead
+        await Promise.all(
+            chat.participants.map(async (participantId: any) => {
+                const isOnlineInChat = onlineUserIds.includes(participantId.toString());
+                const isSender = participantId.toString() === socket.user!._id.toString();
+
+                const userChat = await UserChat.findOne({ chat: chatId, user: participantId });
+
+                if (!userChat) return;
+
+                if (isSender) {
+                    // For sender: keep lastRead = now
+                    userChat.lastRead = new Date();
+                } else if (isOnlineInChat) {
+                    // For online participants in this chat: mark as read immediately
+                    userChat.lastRead = new Date();
+                } else {
+                    // For offline/not in room: increment unread
+                    userChat.unreadCount += 1;
+                }
+                await userChat.save();
+            })
+        );
+
+        // Update chat lastMessage
+        chat.lastMessage = newMessage._id as Types.ObjectId;
+        await chat.save();
+
+        // Emit message to all participants in chat room
+        io.in(chatId).emit(ChatEventEnum.NEW_MESSAGE_EVENT, populatedMessage);
     });
 };
 
@@ -32,10 +104,7 @@ const mountParticipantStoppedTypingEvent = (socket: AuthenticatedSocket): void =
 const initializeSocketIO = (io: Server) => {
     io.on("connection", async (socket: AuthenticatedSocket) => {
         try {
-            // const cookies = cookie.parse(socket.handshake.headers?.cookie || "");
-            // let token = cookies?.accessToken || socket.handshake.auth?.token;
-            let token = socket.handshake.auth?.token;
-
+            const token = socket.handshake.auth?.token;
             if (!token) {
                 throw new ApiError(401, "Un-authorized handshake. Token is missing");
             }
@@ -43,27 +112,24 @@ const initializeSocketIO = (io: Server) => {
             const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET!) as {
                 _id: string;
             };
-
-            const user: IUser | null = await User.findById(decodedToken._id).select(
+            const user = await User.findById(decodedToken._id).select(
                 "-password -refreshToken -emailVerificationToken -emailVerificationExpiry"
             );
-
-            if (!user) {
-                throw new ApiError(401, "Un-authorized handshake. Token is invalid");
-            }
+            if (!user) throw new ApiError(401, "Invalid token");
 
             socket.user = user;
-
             socket.join(user._id.toString());
             socket.emit(ChatEventEnum.CONNECTED_EVENT);
-            console.log("User connected 🗼. userId: ", user._id.toString());
+            console.log("User connected 🗼 userId:", user._id.toString());
 
+            // Mount events
             mountJoinChatEvent(socket);
+            mountMessageEvent(io, socket);
             mountParticipantTypingEvent(socket);
             mountParticipantStoppedTypingEvent(socket);
 
             socket.on(ChatEventEnum.DISCONNECT_EVENT, () => {
-                console.log("User has disconnected 🚫. userId: " + socket.user?._id);
+                console.log("User disconnected 🚫 userId:", socket.user?._id);
                 if (socket.user?._id) {
                     socket.leave(socket.user._id.toString());
                 }
@@ -71,7 +137,7 @@ const initializeSocketIO = (io: Server) => {
         } catch (error: any) {
             socket.emit(
                 ChatEventEnum.SOCKET_ERROR_EVENT,
-                error?.message || "Something went wrong while connecting to the socket."
+                error?.message || "Socket connection failed"
             );
         }
     });
