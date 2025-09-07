@@ -1,0 +1,17 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_middleware_1 = require("../middlewares/auth.middleware");
+const multer_middleware_1 = require("../middlewares/multer.middleware");
+const user_controller_1 = require("../controllers/user.controller");
+const router = (0, express_1.Router)();
+router.post("/register", user_controller_1.UserController.registerUser);
+router.post("/login", user_controller_1.UserController.loginUser);
+router.post("/refresh-token", user_controller_1.UserController.refreshAccessToken);
+router.use(auth_middleware_1.verifyJWT);
+router.get("/current-user", user_controller_1.UserController.getCurrentUser);
+router.post("/logout", user_controller_1.UserController.logoutUser);
+router.post("/change-password", user_controller_1.UserController.changeCurrentPassword);
+router.post("/reset-password", user_controller_1.UserController.resetPassword);
+router.post("/update-avatar", multer_middleware_1.upload.single("avatar"), user_controller_1.UserController.updateUserAvatar);
+exports.default = router;
