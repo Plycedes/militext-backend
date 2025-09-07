@@ -96,8 +96,6 @@ const mountMessageEvent = (io: Server, socket: AuthenticatedSocket): void => {
 const mountParticipantTypingEvent = (socket: AuthenticatedSocket): void => {
     socket.on(ChatEventEnum.TYPING_EVENT, (chatId: string) => {
         socket.in(chatId).emit(ChatEventEnum.TYPING_EVENT, {
-            chatId,
-            userId: socket.user?._id,
             username: socket.user?.username,
         });
     });
@@ -105,10 +103,7 @@ const mountParticipantTypingEvent = (socket: AuthenticatedSocket): void => {
 
 const mountParticipantStoppedTypingEvent = (socket: AuthenticatedSocket): void => {
     socket.on(ChatEventEnum.STOP_TYPING_EVENT, (chatId: string) => {
-        socket.in(chatId).emit(ChatEventEnum.STOP_TYPING_EVENT, {
-            chatId,
-            userId: socket.user?._id,
-        });
+        socket.in(chatId).emit(ChatEventEnum.STOP_TYPING_EVENT);
     });
 };
 

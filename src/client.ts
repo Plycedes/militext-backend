@@ -42,11 +42,11 @@ function connectClient() {
     });
 
     socket.on(ChatEventEnum.TYPING_EVENT, (data) => {
-        console.log(`✍️ ${data.username} is typing in chat:`, data.chatId);
+        console.log(`✍️ ${data.username} is typing in chat`);
     });
 
-    socket.on(ChatEventEnum.STOP_TYPING_EVENT, (data) => {
-        console.log(`✋ ${data.username} stopped typing in chat:`, data.chatId);
+    socket.on(ChatEventEnum.STOP_TYPING_EVENT, () => {
+        console.log(`✋ User stopped typing in chat`);
     });
 
     socket.on("disconnect", () => {

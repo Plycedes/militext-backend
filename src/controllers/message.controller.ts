@@ -47,6 +47,7 @@ export class MessageController {
     static getAllMessages = asyncHandler(async (req: AuthRequest, res: Response) => {
         const { chatId } = req.params;
         const userId = req.user!._id;
+        const { page = 1, limit = 20 } = req.query; // 👈 pagination params
 
         const selectedChat = await Chat.findById(chatId);
         if (!selectedChat) {
@@ -71,9 +72,11 @@ export class MessageController {
             ...chatMessageCommonAggregation(),
             {
                 $sort: {
-                    createdAt: 1, // ascending so frontend can easily split unread section
+                    createdAt: -1,
                 },
             },
+            { $skip: (Number(page) - 1) * Number(limit) }, // 👈 pagination
+            { $limit: Number(limit) }, // 👈 pagination
         ]);
 
         // 🔹 Step 3: Mark messages as read (update lastReadAt + reset unreadCount)
@@ -87,8 +90,11 @@ export class MessageController {
             new ApiResponse(
                 200,
                 {
-                    messages: messages || [],
-                    lastRead, // frontend can use this to draw "New Messages" divider
+                    messages: messages.reverse(), // 👈 reverse so frontend sees oldest → newest
+                    lastRead,
+                    page: Number(page),
+                    limit: Number(limit),
+                    hasMore: messages.length === Number(limit),
                 },
                 "Messages fetched successfully"
             )
