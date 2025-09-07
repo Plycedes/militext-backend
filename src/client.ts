@@ -41,12 +41,12 @@ function connectClient() {
         console.log("💬 New message received:", message);
     });
 
-    socket.on(ChatEventEnum.TYPING_EVENT, (chatId) => {
-        console.log("✍️ Someone typing in chat:", chatId);
+    socket.on(ChatEventEnum.TYPING_EVENT, (data) => {
+        console.log(`✍️ ${data.username} is typing in chat:`, data.chatId);
     });
 
-    socket.on(ChatEventEnum.STOP_TYPING_EVENT, (chatId) => {
-        console.log("✋ Someone stopped typing in chat:", chatId);
+    socket.on(ChatEventEnum.STOP_TYPING_EVENT, (data) => {
+        console.log(`✋ ${data.username} stopped typing in chat:`, data.chatId);
     });
 
     socket.on("disconnect", () => {
