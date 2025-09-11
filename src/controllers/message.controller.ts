@@ -47,7 +47,7 @@ export class MessageController {
     static getAllMessages = asyncHandler(async (req: AuthRequest, res: Response) => {
         const { chatId } = req.params;
         const userId = req.user!._id;
-        const { page = 1, limit = 20 } = req.query; // 👈 pagination params
+        const { before, limit = 20 } = req.query;
 
         const selectedChat = await Chat.findById(chatId);
         if (!selectedChat) {
@@ -64,19 +64,23 @@ export class MessageController {
 
         // 🔹 Step 2: Fetch messages before updating lastReadAt
         const messages = await ChatMessage.aggregate([
+            // {
+            //     $match: {
+            //         chat: new mongoose.Types.ObjectId(chatId),
+            //     },
+            // },
+            // ...chatMessageCommonAggregation(),
             {
-                $match: {
-                    chat: new mongoose.Types.ObjectId(chatId),
-                },
+                $match: before
+                    ? {
+                          chat: new mongoose.Types.ObjectId(chatId),
+                          _id: { $lt: new mongoose.Types.ObjectId(before as string) },
+                      }
+                    : { chat: new mongoose.Types.ObjectId(chatId) },
             },
             ...chatMessageCommonAggregation(),
-            {
-                $sort: {
-                    createdAt: -1,
-                },
-            },
-            { $skip: (Number(page) - 1) * Number(limit) }, // 👈 pagination
-            { $limit: Number(limit) }, // 👈 pagination
+            { $sort: { createdAt: -1 } },
+            { $limit: Number(limit) },
         ]);
 
         // 🔹 Step 3: Mark messages as read (update lastReadAt + reset unreadCount)
@@ -90,11 +94,11 @@ export class MessageController {
             new ApiResponse(
                 200,
                 {
-                    messages: messages.reverse(), // 👈 reverse so frontend sees oldest → newest
+                    messages: messages.reverse(),
                     lastRead,
-                    page: Number(page),
                     limit: Number(limit),
                     hasMore: messages.length === Number(limit),
+                    nextCursor: messages.length ? messages[0]._id : null,
                 },
                 "Messages fetched successfully"
             )

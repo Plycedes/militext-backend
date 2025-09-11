@@ -2,7 +2,7 @@ import { io, Socket } from "socket.io-client";
 import readline from "readline";
 import { ChatEventEnum } from "./constants";
 
-const SERVER_URL = "http://localhost:8000";
+const SERVER_URL = "https://militext-backend.onrender.com";
 
 // netwatch
 // const TOKEN =
