@@ -5,7 +5,7 @@ export interface IChat extends Document {
     isGroupChat: boolean;
     lastMessage: Types.ObjectId;
     participants: Types.ObjectId[];
-    admin: Types.ObjectId;
+    admin: Types.ObjectId[];
 }
 
 const chatSchema = new Schema<IChat>(
@@ -28,10 +28,12 @@ const chatSchema = new Schema<IChat>(
                 ref: "User",
             },
         ],
-        admin: {
-            type: Schema.Types.ObjectId,
-            ref: "User",
-        },
+        admin: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "User",
+            },
+        ],
     },
     { timestamps: true }
 );

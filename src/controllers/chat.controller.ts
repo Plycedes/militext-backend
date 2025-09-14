@@ -293,7 +293,7 @@ export class ChatController {
             name,
             isGroupChat: true,
             participants: members,
-            admin: req.user!._id,
+            admin: [req.user!._id],
         });
 
         // 2. Create UserChat entries for participants
@@ -499,15 +499,32 @@ export class ChatController {
             throw new ApiError(400, "You are not a part of this group chat");
         }
 
-        const updatedChat = await Chat.findByIdAndUpdate(
+        let updatedChat = await Chat.findByIdAndUpdate(
             chatId,
-            {
-                $pull: {
-                    participants: req.user?.id,
+            [
+                {
+                    $set: {
+                        participants: { $setDifference: ["$participants", [req.user!._id]] },
+                        admin: { $setDifference: ["$admin", [req.user!._id]] },
+                    },
                 },
-            },
+            ],
             { new: true }
         );
+
+        if (!updatedChat) {
+            throw new ApiError(404, "Chat not found");
+        }
+
+        if (updatedChat.admin.length === 0) {
+            if (updatedChat.participants.length > 0) {
+                updatedChat.admin.push(updatedChat.participants[0]);
+                await updatedChat.save();
+            } else {
+                await Chat.findByIdAndDelete(chatId);
+                updatedChat = null;
+            }
+        }
 
         const chat = await Chat.aggregate([
             {
@@ -525,6 +542,32 @@ export class ChatController {
         }
 
         return res.status(200).json(new ApiResponse(200, payload, "Left a group successfully"));
+    });
+
+    static promoteToAdmin = asyncHandler(async (req: AuthRequest, res: Response) => {
+        const { userId, chatId } = req.body;
+        const chat = await Chat.findByIdAndUpdate(chatId, {
+            $addToSet: { admin: userId }, // ensures no duplicate entry
+        });
+
+        if (!chat) {
+            throw new ApiError(404, "Chat not found");
+        }
+
+        return res.status(200).json(new ApiResponse(200, {}, "Promoted to admin successfully"));
+    });
+
+    static demoteFromAdmin = asyncHandler(async (req: AuthRequest, res: Response) => {
+        const { userId, chatId } = req.body;
+        const chat = await Chat.findByIdAndUpdate(chatId, {
+            $pull: { admin: userId },
+        });
+
+        if (!chat) {
+            throw new ApiError(404, "Chat not found");
+        }
+
+        return res.status(200).json(new ApiResponse(200, {}, "Promoted to admin successfully"));
     });
 
     static addNewParticipantInGroupChat = asyncHandler(async (req: AuthRequest, res: Response) => {

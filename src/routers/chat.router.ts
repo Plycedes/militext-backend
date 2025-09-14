@@ -32,4 +32,7 @@ router.route("/leave/group/:chatId").delete(ChatController.leaveGroupChat);
 
 router.route("/remove/:chatId").delete(ChatController.deleteOneOnOneChat);
 
+router.route("/group/promote").post(ChatController.promoteToAdmin);
+router.route("/group/demote").post(ChatController.demoteFromAdmin);
+
 export default router;
