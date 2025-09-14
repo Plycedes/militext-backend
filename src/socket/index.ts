@@ -142,7 +142,7 @@ const initializeSocketIO = (io: Server) => {
             });
         } catch (error: any) {
             socket.emit(
-                ChatEventEnum.SOCKET_ERROR_EVENT,
+                ChatEventEnum.SOCEKT_CONNECT_ERROR,
                 error?.message || "Socket connection failed"
             );
         }

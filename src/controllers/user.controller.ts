@@ -224,9 +224,10 @@ export class UserController {
 
     static getCurrentUser = asyncHandler(
         async (req: CustomRequest, res: Response): Promise<Response> => {
+            const user = await User.findById(req.user!._id);
             return res
                 .status(200)
-                .json(new ApiResponse(200, req.user, "Current User fetched successfully"));
+                .json(new ApiResponse(200, user, "Current User fetched successfully"));
         }
     );
 

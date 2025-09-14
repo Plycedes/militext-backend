@@ -13,6 +13,7 @@ export interface IUser extends Document {
     number: string;
     avatar: string;
     avatarId: string;
+    bio?: string;
     password: string;
     refreshToken?: string;
     isPasswordCorrect(password: string): Promise<boolean>;
@@ -52,6 +53,9 @@ const userSchema = new Schema<IUser>(
             type: String,
             required: true,
         },
+        bio: {
+            type: String,
+        },
         password: {
             type: String,
             required: [true, "Password is required"],
@@ -86,7 +90,7 @@ userSchema.methods.generateAccessToken = function (): string {
     }
 
     const options: jwt.SignOptions = {
-        expiresIn: "1d",
+        expiresIn: "1m",
     };
 
     return jwt.sign(payload, secret, options);

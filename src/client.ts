@@ -2,7 +2,9 @@ import { io, Socket } from "socket.io-client";
 import readline from "readline";
 import { ChatEventEnum } from "./constants";
 
-const SERVER_URL = "https://militext-backend.onrender.com";
+// const SERVER_URL = "https://militext-backend.onrender.com";
+
+const SERVER_URL = "http://localhost:8000";
 
 // netwatch
 // const TOKEN =
@@ -10,7 +12,7 @@ const SERVER_URL = "https://militext-backend.onrender.com";
 
 // steel
 const TOKEN =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGI5NDVmOGIyMzcxNWFiZDBjMGE2NWUiLCJlbWFpbCI6ImJsYWNrc3RlZWxlbXBlcm9yQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoic3RlZWwiLCJpYXQiOjE3NTcxODk2NTQsImV4cCI6MTc1NzI3NjA1NH0.iwnSleHxFgzIqSOowbjQAPBiNRqstIuupY6StWHRHKs";
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGI5NDVmOGIyMzcxNWFiZDBjMGE2NWUiLCJlbWFpbCI6ImJsYWNrc3RlZWxlbXBlcm9yQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoic3RlZWwiLCJpYXQiOjE3NTc2MTQ2ODAsImV4cCI6MTc1NzcwMTA4MH0.7CROOkUEf2Tfq3rcnK_BgnpDXyWAMptRVVnufBVOlWg";
 
 const CHAT_ID = "68bc7cba5178b598bbdd43a5";
 
