@@ -259,12 +259,22 @@ export class UserController {
         }
     );
 
-    static checkUsername = asyncHandler(async (req: Request, res: Response) => {
+    static checkUsername = asyncHandler(async (req: AuthRequest, res: Response) => {
         const { username } = req.params;
         const user = await User.findOne({ username });
+        let available = false;
+        console.log(user);
+        console.log(req.user);
+
+        if (!user) {
+            available = true;
+        } else if (req.user?._id && user._id.toString() === req.user._id.toString()) {
+            available = true;
+        }
+
         return res
             .status(200)
-            .json(new ApiResponse(200, { available: !user }, "Username check successfully"));
+            .json(new ApiResponse(200, { available }, "Username check successfully"));
     });
 
     static checkNumber = asyncHandler(async (req: Request, res: Response) => {

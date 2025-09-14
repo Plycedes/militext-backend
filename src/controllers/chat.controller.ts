@@ -364,7 +364,7 @@ export class ChatController {
             throw new ApiError(404, "Group chat does not exist");
         }
 
-        if (groupChat.admin?.toString() !== req.user!._id?.toString()) {
+        if (!groupChat.admin.some((id) => id.toString() === req.user!._id.toString())) {
             throw new ApiError(404, "You are not an admin");
         }
 
@@ -589,8 +589,8 @@ export class ChatController {
             throw new ApiError(404, "Group chat does not exists");
         }
 
-        if (groupChat.admin?.toString() !== req.user!._id?.toString()) {
-            throw new ApiError(403, "You are not an admin");
+        if (!groupChat.admin.some((id) => id.toString() === req.user!._id.toString())) {
+            throw new ApiError(404, "You are not an admin");
         }
 
         const existingParticipants: Types.ObjectId[] = groupChat.participants as Types.ObjectId[];
@@ -643,7 +643,7 @@ export class ChatController {
                 throw new ApiError(404, "Group chat does not exist");
             }
 
-            if (!groupChat.admin?.toString() !== req.user!.id?.toString()) {
+            if (!groupChat.admin.some((id) => id.toString() === req.user!._id.toString())) {
                 throw new ApiError(404, "You are not an admin");
             }
 

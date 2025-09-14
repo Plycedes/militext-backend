@@ -22,4 +22,8 @@ router.post("/reset-password", UserController.resetPassword);
 router.post("/update", UserController.updateUser);
 router.post("/update-avatar", upload.single("avatar"), UserController.updateUserAvatar);
 
+router.get("/v/check-username/:username", UserController.checkUsername);
+router.get("/v/check-number/:number", UserController.checkNumber);
+router.get("/v/check-email/:email", UserController.checkEmail);
+
 export default router;
