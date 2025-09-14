@@ -258,4 +258,48 @@ export class UserController {
             return res.status(200).json(new ApiResponse(200, user, "Avatar updated successfully"));
         }
     );
+
+    static checkUsername = asyncHandler(async (req: Request, res: Response) => {
+        const { username } = req.params;
+        const user = await User.findOne({ username });
+        return res
+            .status(200)
+            .json(new ApiResponse(200, { available: !user }, "Username check successfully"));
+    });
+
+    static checkNumber = asyncHandler(async (req: Request, res: Response) => {
+        const { number } = req.params;
+        const user = await User.findOne({ number });
+        return res
+            .status(200)
+            .json(new ApiResponse(200, { available: !user }, "Number check successfully"));
+    });
+
+    static checkEmail = asyncHandler(async (req: Request, res: Response) => {
+        const { email } = req.params;
+        const user = await User.findOne({ email });
+        return res
+            .status(200)
+            .json(new ApiResponse(200, { available: !user }, "Email check successfully"));
+    });
+
+    static updateUser = asyncHandler(async (req: AuthRequest, res: Response) => {
+        const { username, email, number, password } = req.body;
+        if (username) {
+            const user = await User.findOne({ $or: [username, email, number] });
+            if (user) throw new ApiError(407, "User with same username, email or number exists");
+        }
+
+        const user = await User.findById(req.user!._id);
+        if (!user) throw new ApiError(404, "User not found");
+
+        const passwordCorrect = user.isPasswordCorrect(password);
+        if (!passwordCorrect) throw new ApiError(403, "Unauthorized");
+
+        const updatedUser = await User.findByIdAndUpdate(req.user!._id, req.body);
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, { user: updatedUser }, "User updated successfully"));
+    });
 }

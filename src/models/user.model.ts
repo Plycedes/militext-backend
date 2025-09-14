@@ -90,7 +90,7 @@ userSchema.methods.generateAccessToken = function (): string {
     }
 
     const options: jwt.SignOptions = {
-        expiresIn: "1m",
+        expiresIn: "1d",
     };
 
     return jwt.sign(payload, secret, options);
