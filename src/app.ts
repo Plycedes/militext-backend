@@ -27,6 +27,11 @@ app.use(
     })
 );
 
+if (!process.env.NODE_ENV) {
+    app.use(successLogger);
+    app.use(errorLogger);
+}
+
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
@@ -41,6 +46,7 @@ import chatRouter from "./routers/chat.router";
 import messageRouter from "./routers/message.router";
 import emailRouter from "./routers/email.router";
 import { errorHandler } from "./middlewares/error.middleware";
+import { successLogger, errorLogger } from "./middlewares/morgan.middleware";
 
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/chats", chatRouter);
