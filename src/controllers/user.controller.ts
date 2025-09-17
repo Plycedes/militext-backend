@@ -100,7 +100,7 @@ export class UserController {
             const isPasswordValid = await user.isPasswordCorrect(password);
 
             if (!isPasswordValid) {
-                throw new ApiError(401, "Incorrect Password");
+                throw new ApiError(400, "Incorrect Password");
             }
 
             const userId = (user._id as Types.ObjectId).toString();

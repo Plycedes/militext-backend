@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import { Server } from "socket.io";
 import { createServer } from "http";
 import { initializeSocketIO } from "./socket";
+import { successLogger, errorLogger } from "./middlewares/morgan.middleware";
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ const io = new Server(httpServer, {
 });
 
 app.set("io", io);
+initializeSocketIO(io);
 
 app.use(
     cors({
@@ -27,15 +29,15 @@ app.use(
     })
 );
 
-if (!process.env.NODE_ENV) {
-    app.use(successLogger);
-    app.use(errorLogger);
-}
-
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
+
+if (!process.env.NODE_ENV) {
+    app.use(successLogger);
+    app.use(errorLogger);
+}
 
 app.get("/", (_: Request, res: Response) => {
     res.status(200).send({ status: "OK" });
@@ -46,14 +48,11 @@ import chatRouter from "./routers/chat.router";
 import messageRouter from "./routers/message.router";
 import emailRouter from "./routers/email.router";
 import { errorHandler } from "./middlewares/error.middleware";
-import { successLogger, errorLogger } from "./middlewares/morgan.middleware";
 
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/chats", chatRouter);
 app.use("/api/v1/emails", emailRouter);
 app.use("/api/v1/messages", messageRouter);
-
-initializeSocketIO(io);
 
 app.use(errorHandler);
 
