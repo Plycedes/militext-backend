@@ -180,42 +180,86 @@ export class ChatController {
     );
 
     static getAOneOnOneChat = asyncHandler(async (req: AuthRequest, res: Response) => {
-        const { receiverId } = req.params;
-
-        const receiver = await User.findById(receiverId);
-
-        if (!receiver) throw new ApiError(404, "Receiver does not exist");
-
-        if (receiver._id.toString() === req.user!._id.toString()) {
-            throw new ApiError(400, "You cannot link with yourself");
-        }
+        const { receiverId: chatId } = req.params;
 
         const chat = await Chat.aggregate([
             {
                 $match: {
-                    isGroupChat: false,
-                    $and: [
-                        {
-                            participants: { $elemMatch: { $eq: req.user!._id } },
-                        },
-                        {
-                            participants: {
-                                $elemMatch: { $eq: new mongoose.Types.ObjectId(receiverId) },
-                            },
-                        },
-                    ],
+                    _id: new mongoose.Types.ObjectId(chatId),
                 },
             },
             ...chatCommonAggregation2(req.user!._id),
+            // Count messages in this chat
+            {
+                $lookup: {
+                    from: "chatmessages",
+                    localField: "_id",
+                    foreignField: "chat",
+                    as: "messages",
+                },
+            },
+            {
+                $addFields: {
+                    messageCount: { $size: "$messages" },
+                },
+            },
+            {
+                $project: {
+                    messages: 0, // don’t send actual messages
+                },
+            },
+            // Count common groups between both participants
+            {
+                $lookup: {
+                    from: "chats",
+                    let: { participants: "$participants._id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                isGroup: true,
+                                $expr: {
+                                    $setIsSubset: ["$$participants", "$participants"],
+                                },
+                            },
+                        },
+                        { $count: "commonGroupCount" },
+                    ],
+                    as: "commonGroups",
+                },
+            },
+            {
+                $addFields: {
+                    commonGroupCount: {
+                        $ifNull: [{ $arrayElemAt: ["$commonGroups.commonGroupCount", 0] }, 0],
+                    },
+                },
+            },
         ]);
 
-        if (chat.length) {
-            return res
-                .status(200)
-                .json(new ApiResponse(200, chat[0], "Chat retreived successfully"));
-        } else {
+        if (!chat.length) {
             throw new ApiError(404, "Users not linked");
         }
+
+        const chatData = chat[0];
+
+        const friendshipLevel = Math.min(69, Math.floor(chatData.messageCount / 10));
+
+        let friendshipLabel = "Acquaintance";
+        if (friendshipLevel >= 5) friendshipLabel = "Friend";
+        if (friendshipLevel >= 15) friendshipLabel = "Close Friend";
+        if (friendshipLevel >= 30) friendshipLabel = "Best Friend";
+        if (friendshipLevel >= 50) friendshipLabel = "Soulmate";
+        if (friendshipLevel >= 69) friendshipLabel = "Inseparable";
+
+        const responseData = {
+            ...chatData,
+            friendshipLevel,
+            friendshipLabel,
+        };
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, responseData, "Chat retrieved successfully"));
     });
 
     // ---------------- One-on-one chat ----------------
@@ -294,6 +338,7 @@ export class ChatController {
             isGroupChat: true,
             participants: members,
             admin: [req.user!._id],
+            superAdmin: req.user!._id,
         });
 
         // 2. Create UserChat entries for participants
@@ -340,15 +385,50 @@ export class ChatController {
                 },
             },
             ...chatCommonAggregation(),
+            {
+                $lookup: {
+                    from: "chatmessages",
+                    localField: "_id",
+                    foreignField: "chat",
+                    as: "messages",
+                },
+            },
+            {
+                $addFields: {
+                    messageCount: { $size: "$messages" },
+                },
+            },
+            {
+                $project: {
+                    messages: 0,
+                },
+            },
         ]);
 
-        const chat = groupChat[0];
+        const chatData = groupChat[0];
 
-        if (!chat) {
+        if (!chatData) {
             throw new ApiError(404, "Group chat not found");
         }
 
-        return res.status(200).json(new ApiResponse(200, chat, "Group chat fetched successfully"));
+        const friendshipLevel = Math.min(69, Math.floor(chatData.messageCount / 10));
+
+        let friendshipLabel = "Casual Crew";
+        if (friendshipLevel >= 5) friendshipLabel = "Regulars";
+        if (friendshipLevel >= 15) friendshipLabel = "Inner Circle";
+        if (friendshipLevel >= 30) friendshipLabel = "Family vibes";
+        if (friendshipLevel >= 50) friendshipLabel = "Generational";
+        if (friendshipLevel >= 69) friendshipLabel = "Synonyms";
+
+        const responseData = {
+            ...chatData,
+            friendshipLevel,
+            friendshipLabel,
+        };
+
+        return res
+            .status(200)
+            .json(new ApiResponse(200, responseData, "Group chat fetched successfully"));
     });
 
     static renameGroupChat = asyncHandler(async (req: AuthRequest, res: Response) => {
