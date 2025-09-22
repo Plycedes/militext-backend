@@ -11,6 +11,7 @@ import { Chat } from "../models/chat.model";
 import { ChatMessage } from "../models/message.model";
 import { UserChat } from "../models/userChat.model";
 import { Types } from "mongoose";
+import { sendFCMNotification } from "../services/fcm.service";
 
 dotenv.config();
 
@@ -67,18 +68,24 @@ const mountMessageEvent = (io: Server, socket: AuthenticatedSocket): void => {
                 if (!userChat) return;
 
                 if (isSender) {
-                    // For sender: keep lastRead = now
                     userChat.lastRead = new Date();
                 } else if (isOnlineInChat) {
-                    // For online participants in this chat: mark as read immediately
                     userChat.lastRead = new Date();
                 } else {
-                    // For offline/not in room: increment unread
                     userChat.unreadCount += 1;
                     io.to(participantId.toString()).emit(
                         ChatEventEnum.NEW_MESSAGE_EVENT,
                         populatedMessage
                     );
+                    const offlineUser = await User.findById(participantId);
+                    if (offlineUser?.fcmToken) {
+                        await sendFCMNotification(
+                            offlineUser.fcmToken,
+                            socket.user!.username,
+                            content,
+                            { chatId }
+                        );
+                    }
                 }
                 await userChat.save();
             })

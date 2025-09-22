@@ -312,4 +312,14 @@ export class UserController {
             .status(200)
             .json(new ApiResponse(200, { user: updatedUser }, "User updated successfully"));
     });
+
+    static updateFcmToken = asyncHandler(async (req: AuthRequest, res: Response) => {
+        const { fcmToken } = req.body;
+        if (!fcmToken) throw new ApiError(400, "FCM token is required");
+
+        req.user!.fcmToken = fcmToken;
+        await req.user!.save();
+
+        return res.status(200).json(new ApiResponse(200, {}, "FCM token updated"));
+    });
 }

@@ -599,6 +599,9 @@ export class ChatController {
         if (updatedChat.admin.length === 0) {
             if (updatedChat.participants.length > 0) {
                 updatedChat.admin.push(updatedChat.participants[0]);
+                if (updatedChat.superAdmin?.toString() === req.user!._id.toString()) {
+                    updatedChat.admin.push(updatedChat.participants[0]);
+                }
                 await updatedChat.save();
             } else {
                 await Chat.findByIdAndDelete(chatId);
@@ -655,7 +658,7 @@ export class ChatController {
 
         const participantId: string | null | undefined = await User.findOne({
             number: participantNum,
-        }).then((user) => user?.number);
+        }).then((user) => user?._id.toString());
         if (!participantId) {
             throw new ApiError(404, "Number not found on the Grid");
         }
@@ -679,14 +682,11 @@ export class ChatController {
             throw new ApiError(409, "Participant already in the group chat");
         }
 
-        const updateChat = await Chat.findByIdAndUpdate([
-            {
-                $push: {
-                    paricipants: participantId,
-                },
-            },
-            { new: true },
-        ]);
+        const updateChat = await Chat.findByIdAndUpdate(
+            chatId,
+            { $push: { participants: participantId } },
+            { new: true }
+        );
 
         const chat = await Chat.aggregate([
             {
@@ -734,19 +734,16 @@ export class ChatController {
                 throw new ApiError(404, "Participant does not exist in the group chat");
             }
 
-            const updatedChat = await Chat.findByIdAndUpdate([
-                {
-                    $pull: {
-                        participants: participantId,
-                    },
-                },
-                { new: true },
-            ]);
+            const updatedChat = await Chat.findByIdAndUpdate(
+                chatId,
+                { $pull: { participants: participantId, admin: participantId } },
+                { new: true }
+            );
 
             const chat = await Chat.aggregate([
                 {
                     $match: {
-                        _id: updatedChat!.id,
+                        _id: updatedChat!._id,
                     },
                 },
                 ...chatCommonAggregation(),
