@@ -58,7 +58,7 @@ MessageController.getAllMessages = (0, asyncHandler_1.asyncHandler)((req, res) =
     var _b;
     const { chatId } = req.params;
     const userId = req.user._id;
-    const { page = 1, limit = 20 } = req.query; // 👈 pagination params
+    const { before, limit = 20 } = req.query;
     const selectedChat = yield chat_model_1.Chat.findById(chatId);
     if (!selectedChat) {
         throw new ApiError_1.ApiError(404, "Chat does not exist");
@@ -71,19 +71,23 @@ MessageController.getAllMessages = (0, asyncHandler_1.asyncHandler)((req, res) =
     const lastRead = userChat === null || userChat === void 0 ? void 0 : userChat.lastRead;
     // 🔹 Step 2: Fetch messages before updating lastReadAt
     const messages = yield message_model_1.ChatMessage.aggregate([
+        // {
+        //     $match: {
+        //         chat: new mongoose.Types.ObjectId(chatId),
+        //     },
+        // },
+        // ...chatMessageCommonAggregation(),
         {
-            $match: {
-                chat: new mongoose_1.default.Types.ObjectId(chatId),
-            },
+            $match: before
+                ? {
+                    chat: new mongoose_1.default.Types.ObjectId(chatId),
+                    _id: { $lt: new mongoose_1.default.Types.ObjectId(before) },
+                }
+                : { chat: new mongoose_1.default.Types.ObjectId(chatId) },
         },
         ...chatMessageCommonAggregation(),
-        {
-            $sort: {
-                createdAt: -1,
-            },
-        },
-        { $skip: (Number(page) - 1) * Number(limit) }, // 👈 pagination
-        { $limit: Number(limit) }, // 👈 pagination
+        { $sort: { createdAt: -1 } },
+        { $limit: Number(limit) },
     ]);
     // 🔹 Step 3: Mark messages as read (update lastReadAt + reset unreadCount)
     if (userChat) {
@@ -92,11 +96,11 @@ MessageController.getAllMessages = (0, asyncHandler_1.asyncHandler)((req, res) =
         yield userChat.save();
     }
     return res.status(200).json(new ApiResponse_1.ApiResponse(200, {
-        messages: messages.reverse(), // 👈 reverse so frontend sees oldest → newest
+        messages: messages.reverse(),
         lastRead,
-        page: Number(page),
         limit: Number(limit),
         hasMore: messages.length === Number(limit),
+        nextCursor: messages.length ? messages[0]._id : null,
     }, "Messages fetched successfully"));
 }));
 MessageController.sendMessage = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {

@@ -19,5 +19,6 @@ exports.ChatEventEnum = {
     TYPING_EVENT: "typing",
     MESSAGE_DELETE_EVENT: "messageDeleted",
     NEW_MESSAGE_EVENT: "newMessage",
+    SOCEKT_CONNECT_ERROR: "connectError",
 };
 exports.AvailableChatEvents = Object.values(exports.ChatEventEnum);

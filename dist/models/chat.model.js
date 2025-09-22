@@ -54,9 +54,23 @@ const chatSchema = new mongoose_1.Schema({
             ref: "User",
         },
     ],
-    admin: {
+    admin: [
+        {
+            type: mongoose_1.Schema.Types.ObjectId,
+            ref: "User",
+        },
+    ],
+    superAdmin: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: "User",
+        required: false,
+    },
+    avatar: {
+        type: String,
+    },
+    avatarId: {
+        type: String,
+        required: true,
     },
 }, { timestamps: true });
 exports.Chat = mongoose_1.default.models.Chat || mongoose_1.default.model("Chat", chatSchema);

@@ -75,17 +75,22 @@ const userSchema = new mongoose_1.Schema({
     },
     avatar: {
         type: String,
-        required: true,
     },
     avatarId: {
         type: String,
         required: true,
+    },
+    bio: {
+        type: String,
     },
     password: {
         type: String,
         required: [true, "Password is required"],
     },
     refreshToken: {
+        type: String,
+    },
+    fcmToken: {
         type: String,
     },
 }, { timestamps: true });

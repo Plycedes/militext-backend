@@ -21,6 +21,7 @@ const ApiError_1 = require("../utils/ApiError");
 const chat_model_1 = require("../models/chat.model");
 const message_model_1 = require("../models/message.model");
 const userChat_model_1 = require("../models/userChat.model");
+const fcm_service_1 = require("../services/fcm.service");
 dotenv_1.default.config();
 const mountJoinChatEvent = (socket) => {
     socket.on(constants_1.ChatEventEnum.JOIN_CHAT_EVENT, (chatId) => {
@@ -68,17 +69,18 @@ const mountMessageEvent = (io, socket) => {
             if (!userChat)
                 return;
             if (isSender) {
-                // For sender: keep lastRead = now
                 userChat.lastRead = new Date();
             }
             else if (isOnlineInChat) {
-                // For online participants in this chat: mark as read immediately
                 userChat.lastRead = new Date();
             }
             else {
-                // For offline/not in room: increment unread
                 userChat.unreadCount += 1;
                 io.to(participantId.toString()).emit(constants_1.ChatEventEnum.NEW_MESSAGE_EVENT, populatedMessage);
+                const offlineUser = yield user_model_1.User.findById(participantId);
+                if (offlineUser === null || offlineUser === void 0 ? void 0 : offlineUser.fcmToken) {
+                    yield (0, fcm_service_1.sendFCMNotification)(offlineUser.fcmToken, socket.user.username, content, { chatId });
+                }
             }
             yield userChat.save();
         })));
@@ -132,7 +134,7 @@ const initializeSocketIO = (io) => {
             });
         }
         catch (error) {
-            socket.emit(constants_1.ChatEventEnum.SOCKET_ERROR_EVENT, (error === null || error === void 0 ? void 0 : error.message) || "Socket connection failed");
+            socket.emit(constants_1.ChatEventEnum.SOCEKT_CONNECT_ERROR, (error === null || error === void 0 ? void 0 : error.message) || "Socket connection failed");
         }
     }));
 };

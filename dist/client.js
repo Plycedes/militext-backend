@@ -6,12 +6,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const socket_io_client_1 = require("socket.io-client");
 const readline_1 = __importDefault(require("readline"));
 const constants_1 = require("./constants");
-const SERVER_URL = "http://localhost:8000";
+const SERVER_URL = "https://militext-backend.onrender.com";
+// const SERVER_URL = "http://localhost:8000";
 // netwatch
 // const TOKEN =
 //     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGI5NDVmOGIyMzcxNWFiZDBjMGE2NWUiLCJlbWFpbCI6ImJsYWNrc3RlZWxlbXBlcm9yQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoic3RlZWwiLCJpYXQiOjE3NTcxODM1MDEsImV4cCI6MTc1NzI2OTkwMX0.H_xbVnWkJRAiRpo_pyIA9QyLTQoOamUCWiw4QcHXMQg"; // valid JWT from your auth system
 // steel
-const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGI5NDVmOGIyMzcxNWFiZDBjMGE2NWUiLCJlbWFpbCI6ImJsYWNrc3RlZWxlbXBlcm9yQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoic3RlZWwiLCJpYXQiOjE3NTcxODk2NTQsImV4cCI6MTc1NzI3NjA1NH0.iwnSleHxFgzIqSOowbjQAPBiNRqstIuupY6StWHRHKs";
+const TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OGI5NDVmOGIyMzcxNWFiZDBjMGE2NWUiLCJlbWFpbCI6ImJsYWNrc3RlZWxlbXBlcm9yQGdtYWlsLmNvbSIsInVzZXJuYW1lIjoic3RlZWwiLCJpYXQiOjE3NTc5MTc3NTMsImV4cCI6MTc1ODAwNDE1M30.yizlAp-eMYaaIJPnuxzvigOaXFkKoQcgSGLFKXZRQ_M";
+// const CHAT_ID = "68c6877301644d99441cee64";
 const CHAT_ID = "68bc7cba5178b598bbdd43a5";
 let socket;
 // readline setup for interactive menu

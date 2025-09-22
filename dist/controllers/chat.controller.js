@@ -185,39 +185,81 @@ ChatController.searchAvailableUsers = (0, asyncHandler_1.asyncHandler)((req, res
     return res.status(200).json(new ApiResponse_1.ApiResponse(200, users, "Users fetched successfully"));
 }));
 ChatController.getAOneOnOneChat = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { receiverId } = req.params;
-    const receiver = yield user_model_1.User.findById(receiverId);
-    if (!receiver)
-        throw new ApiError_1.ApiError(404, "Receiver does not exist");
-    if (receiver._id.toString() === req.user._id.toString()) {
-        throw new ApiError_1.ApiError(400, "You cannot link with yourself");
-    }
+    const { receiverId: chatId } = req.params;
     const chat = yield chat_model_1.Chat.aggregate([
         {
             $match: {
-                isGroupChat: false,
-                $and: [
-                    {
-                        participants: { $elemMatch: { $eq: req.user._id } },
-                    },
-                    {
-                        participants: {
-                            $elemMatch: { $eq: new mongoose_1.default.Types.ObjectId(receiverId) },
-                        },
-                    },
-                ],
+                _id: new mongoose_1.default.Types.ObjectId(chatId),
             },
         },
         ...chatCommonAggregation2(req.user._id),
+        // Count messages in this chat
+        {
+            $lookup: {
+                from: "chatmessages",
+                localField: "_id",
+                foreignField: "chat",
+                as: "messages",
+            },
+        },
+        {
+            $addFields: {
+                messageCount: { $size: "$messages" },
+            },
+        },
+        {
+            $project: {
+                messages: 0, // don’t send actual messages
+            },
+        },
+        // Count common groups between both participants
+        {
+            $lookup: {
+                from: "chats",
+                let: { participants: "$participants._id" },
+                pipeline: [
+                    {
+                        $match: {
+                            isGroup: true,
+                            $expr: {
+                                $setIsSubset: ["$$participants", "$participants"],
+                            },
+                        },
+                    },
+                    { $count: "commonGroupCount" },
+                ],
+                as: "commonGroups",
+            },
+        },
+        {
+            $addFields: {
+                commonGroupCount: {
+                    $ifNull: [{ $arrayElemAt: ["$commonGroups.commonGroupCount", 0] }, 0],
+                },
+            },
+        },
     ]);
-    if (chat.length) {
-        return res
-            .status(200)
-            .json(new ApiResponse_1.ApiResponse(200, chat[0], "Chat retreived successfully"));
-    }
-    else {
+    if (!chat.length) {
         throw new ApiError_1.ApiError(404, "Users not linked");
     }
+    const chatData = chat[0];
+    const friendshipLevel = Math.min(69, Math.floor(chatData.messageCount / 10));
+    let friendshipLabel = "Acquaintance";
+    if (friendshipLevel >= 5)
+        friendshipLabel = "Friend";
+    if (friendshipLevel >= 15)
+        friendshipLabel = "Close Friend";
+    if (friendshipLevel >= 30)
+        friendshipLabel = "Best Friend";
+    if (friendshipLevel >= 50)
+        friendshipLabel = "Soulmate";
+    if (friendshipLevel >= 69)
+        friendshipLabel = "Inseparable";
+    const responseData = Object.assign(Object.assign({}, chatData), { friendshipLevel,
+        friendshipLabel });
+    return res
+        .status(200)
+        .json(new ApiResponse_1.ApiResponse(200, responseData, "Chat retrieved successfully"));
 }));
 // ---------------- One-on-one chat ----------------
 ChatController.createAOneOnOneChat = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -279,7 +321,8 @@ ChatController.createAGroupChat = (0, asyncHandler_1.asyncHandler)((req, res) =>
         name,
         isGroupChat: true,
         participants: members,
-        admin: req.user._id,
+        admin: [req.user._id],
+        superAdmin: req.user._id,
     });
     // 2. Create UserChat entries for participants
     yield Promise.all(members.map((userId) => userChat_model_1.UserChat.create({
@@ -318,15 +361,49 @@ ChatController.getGroupChatDetails = (0, asyncHandler_1.asyncHandler)((req, res)
             },
         },
         ...chatCommonAggregation(),
+        {
+            $lookup: {
+                from: "chatmessages",
+                localField: "_id",
+                foreignField: "chat",
+                as: "messages",
+            },
+        },
+        {
+            $addFields: {
+                messageCount: { $size: "$messages" },
+            },
+        },
+        {
+            $project: {
+                messages: 0,
+            },
+        },
     ]);
-    const chat = groupChat[0];
-    if (!chat) {
+    const chatData = groupChat[0];
+    if (!chatData) {
         throw new ApiError_1.ApiError(404, "Group chat not found");
     }
-    return res.status(200).json(new ApiResponse_1.ApiResponse(200, chat, "Group chat fetched successfully"));
+    const friendshipLevel = Math.min(69, Math.floor(chatData.messageCount / 10));
+    let friendshipLabel = "Casual Crew";
+    if (friendshipLevel >= 5)
+        friendshipLabel = "Regulars";
+    if (friendshipLevel >= 15)
+        friendshipLabel = "Inner Circle";
+    if (friendshipLevel >= 30)
+        friendshipLabel = "Family vibes";
+    if (friendshipLevel >= 50)
+        friendshipLabel = "Generational";
+    if (friendshipLevel >= 69)
+        friendshipLabel = "Synonyms";
+    const responseData = Object.assign(Object.assign({}, chatData), { friendshipLevel,
+        friendshipLabel });
+    return res
+        .status(200)
+        .json(new ApiResponse_1.ApiResponse(200, responseData, "Group chat fetched successfully"));
 }));
 ChatController.renameGroupChat = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b, _c, _d;
+    var _b;
     const { chatId } = req.params;
     const { name } = req.body;
     const groupChat = yield chat_model_1.Chat.findOne({
@@ -336,7 +413,7 @@ ChatController.renameGroupChat = (0, asyncHandler_1.asyncHandler)((req, res) => 
     if (!groupChat) {
         throw new ApiError_1.ApiError(404, "Group chat does not exist");
     }
-    if (((_b = groupChat.admin) === null || _b === void 0 ? void 0 : _b.toString()) !== ((_c = req.user._id) === null || _c === void 0 ? void 0 : _c.toString())) {
+    if (!groupChat.admin.some((id) => id.toString() === req.user._id.toString())) {
         throw new ApiError_1.ApiError(404, "You are not an admin");
     }
     const updatedGroupChat = yield chat_model_1.Chat.findByIdAndUpdate(chatId, {
@@ -356,7 +433,7 @@ ChatController.renameGroupChat = (0, asyncHandler_1.asyncHandler)((req, res) => 
     if (!payload) {
         throw new ApiError_1.ApiError(500, "Internal server error");
     }
-    (_d = payload === null || payload === void 0 ? void 0 : payload.participants) === null || _d === void 0 ? void 0 : _d.forEach((participant) => {
+    (_b = payload === null || payload === void 0 ? void 0 : payload.participants) === null || _b === void 0 ? void 0 : _b.forEach((participant) => {
         var _b;
         (0, socket_1.emitSocketEvent)(req, (_b = participant._id) === null || _b === void 0 ? void 0 : _b.toString(), constants_1.ChatEventEnum.UPDATE_GROUP_NAME_EVENT, payload);
     });
@@ -430,11 +507,30 @@ ChatController.leaveGroupChat = (0, asyncHandler_1.asyncHandler)((req, res) => _
     if (!(existingParticipants === null || existingParticipants === void 0 ? void 0 : existingParticipants.some((id) => id.toString() === req.user._id.toString()))) {
         throw new ApiError_1.ApiError(400, "You are not a part of this group chat");
     }
-    const updatedChat = yield chat_model_1.Chat.findByIdAndUpdate(chatId, {
-        $pull: {
-            participants: (_b = req.user) === null || _b === void 0 ? void 0 : _b.id,
+    let updatedChat = yield chat_model_1.Chat.findByIdAndUpdate(chatId, [
+        {
+            $set: {
+                participants: { $setDifference: ["$participants", [req.user._id]] },
+                admin: { $setDifference: ["$admin", [req.user._id]] },
+            },
         },
-    }, { new: true });
+    ], { new: true });
+    if (!updatedChat) {
+        throw new ApiError_1.ApiError(404, "Chat not found");
+    }
+    if (updatedChat.admin.length === 0) {
+        if (updatedChat.participants.length > 0) {
+            updatedChat.admin.push(updatedChat.participants[0]);
+            if (((_b = updatedChat.superAdmin) === null || _b === void 0 ? void 0 : _b.toString()) === req.user._id.toString()) {
+                updatedChat.admin.push(updatedChat.participants[0]);
+            }
+            yield updatedChat.save();
+        }
+        else {
+            yield chat_model_1.Chat.findByIdAndDelete(chatId);
+            updatedChat = null;
+        }
+    }
     const chat = yield chat_model_1.Chat.aggregate([
         {
             $match: {
@@ -449,12 +545,31 @@ ChatController.leaveGroupChat = (0, asyncHandler_1.asyncHandler)((req, res) => _
     }
     return res.status(200).json(new ApiResponse_1.ApiResponse(200, payload, "Left a group successfully"));
 }));
+ChatController.promoteToAdmin = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId, chatId } = req.body;
+    const chat = yield chat_model_1.Chat.findByIdAndUpdate(chatId, {
+        $addToSet: { admin: userId }, // ensures no duplicate entry
+    });
+    if (!chat) {
+        throw new ApiError_1.ApiError(404, "Chat not found");
+    }
+    return res.status(200).json(new ApiResponse_1.ApiResponse(200, {}, "Promoted to admin successfully"));
+}));
+ChatController.demoteFromAdmin = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { userId, chatId } = req.body;
+    const chat = yield chat_model_1.Chat.findByIdAndUpdate(chatId, {
+        $pull: { admin: userId },
+    });
+    if (!chat) {
+        throw new ApiError_1.ApiError(404, "Chat not found");
+    }
+    return res.status(200).json(new ApiResponse_1.ApiResponse(200, {}, "Promoted to admin successfully"));
+}));
 ChatController.addNewParticipantInGroupChat = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b, _c;
     const { chatId, participantNum } = req.params;
     const participantId = yield user_model_1.User.findOne({
         number: participantNum,
-    }).then((user) => user === null || user === void 0 ? void 0 : user.number);
+    }).then((user) => user === null || user === void 0 ? void 0 : user._id.toString());
     if (!participantId) {
         throw new ApiError_1.ApiError(404, "Number not found on the Grid");
     }
@@ -465,21 +580,14 @@ ChatController.addNewParticipantInGroupChat = (0, asyncHandler_1.asyncHandler)((
     if (!groupChat) {
         throw new ApiError_1.ApiError(404, "Group chat does not exists");
     }
-    if (((_b = groupChat.admin) === null || _b === void 0 ? void 0 : _b.toString()) !== ((_c = req.user._id) === null || _c === void 0 ? void 0 : _c.toString())) {
-        throw new ApiError_1.ApiError(403, "You are not an admin");
+    if (!groupChat.admin.some((id) => id.toString() === req.user._id.toString())) {
+        throw new ApiError_1.ApiError(404, "You are not an admin");
     }
     const existingParticipants = groupChat.participants;
     if (existingParticipants === null || existingParticipants === void 0 ? void 0 : existingParticipants.some((id) => id.toString() === participantId)) {
         throw new ApiError_1.ApiError(409, "Participant already in the group chat");
     }
-    const updateChat = yield chat_model_1.Chat.findByIdAndUpdate([
-        {
-            $push: {
-                paricipants: participantId,
-            },
-        },
-        { new: true },
-    ]);
+    const updateChat = yield chat_model_1.Chat.findByIdAndUpdate(chatId, { $push: { participants: participantId } }, { new: true });
     const chat = yield chat_model_1.Chat.aggregate([
         {
             $match: {
@@ -498,7 +606,6 @@ ChatController.addNewParticipantInGroupChat = (0, asyncHandler_1.asyncHandler)((
         .json(new ApiResponse_1.ApiResponse(200, payload, "Participant added successfully"));
 }));
 ChatController.removeParticipantFromGroupChat = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b, _c;
     const { chatId, participantNum } = req.params;
     const participantId = participantNum;
     const groupChat = yield chat_model_1.Chat.findOne({
@@ -508,25 +615,18 @@ ChatController.removeParticipantFromGroupChat = (0, asyncHandler_1.asyncHandler)
     if (!groupChat) {
         throw new ApiError_1.ApiError(404, "Group chat does not exist");
     }
-    if (!((_b = groupChat.admin) === null || _b === void 0 ? void 0 : _b.toString()) !== ((_c = req.user.id) === null || _c === void 0 ? void 0 : _c.toString())) {
+    if (!groupChat.admin.some((id) => id.toString() === req.user._id.toString())) {
         throw new ApiError_1.ApiError(404, "You are not an admin");
     }
     const existingParticipants = groupChat.participants;
     if (!(existingParticipants === null || existingParticipants === void 0 ? void 0 : existingParticipants.some((id) => id.toString() === participantId))) {
         throw new ApiError_1.ApiError(404, "Participant does not exist in the group chat");
     }
-    const updatedChat = yield chat_model_1.Chat.findByIdAndUpdate([
-        {
-            $pull: {
-                participants: participantId,
-            },
-        },
-        { new: true },
-    ]);
+    const updatedChat = yield chat_model_1.Chat.findByIdAndUpdate(chatId, { $pull: { participants: participantId, admin: participantId } }, { new: true });
     const chat = yield chat_model_1.Chat.aggregate([
         {
             $match: {
-                _id: updatedChat.id,
+                _id: updatedChat._id,
             },
         },
         ...chatCommonAggregation(),

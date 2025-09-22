@@ -82,7 +82,7 @@ UserController.loginUser = (0, asyncHandler_1.asyncHandler)((req, res) => __awai
     }
     const isPasswordValid = yield user.isPasswordCorrect(password);
     if (!isPasswordValid) {
-        throw new ApiError_1.ApiError(401, "Incorrect Password");
+        throw new ApiError_1.ApiError(400, "Incorrect Password");
     }
     const userId = user._id.toString();
     const { accessToken, refreshToken } = yield generateAccessAndRefreshTokens(userId);
@@ -154,9 +154,10 @@ UserController.resetPassword = (0, asyncHandler_1.asyncHandler)((req, res) => __
     return res.status(200).json(new ApiResponse_1.ApiResponse(200, {}, "Password reset successful"));
 }));
 UserController.getCurrentUser = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const user = yield user_model_1.User.findById(req.user._id);
     return res
         .status(200)
-        .json(new ApiResponse_1.ApiResponse(200, req.user, "Current User fetched successfully"));
+        .json(new ApiResponse_1.ApiResponse(200, user, "Current User fetched successfully"));
 }));
 UserController.updateUserAvatar = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _b, _c;
@@ -174,4 +175,61 @@ UserController.updateUserAvatar = (0, asyncHandler_1.asyncHandler)((req, res) =>
     }
     const user = yield user_model_1.User.findByIdAndUpdate((_c = req.user) === null || _c === void 0 ? void 0 : _c._id, { avatar: avatar.url, avatarId: avatar.public_id }, { new: true }).select("-password");
     return res.status(200).json(new ApiResponse_1.ApiResponse(200, user, "Avatar updated successfully"));
+}));
+UserController.checkUsername = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _b;
+    const { username } = req.params;
+    const user = yield user_model_1.User.findOne({ username });
+    let available = false;
+    console.log(user);
+    console.log(req.user);
+    if (!user) {
+        available = true;
+    }
+    else if (((_b = req.user) === null || _b === void 0 ? void 0 : _b._id) && user._id.toString() === req.user._id.toString()) {
+        available = true;
+    }
+    return res
+        .status(200)
+        .json(new ApiResponse_1.ApiResponse(200, { available }, "Username check successfully"));
+}));
+UserController.checkNumber = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { number } = req.params;
+    const user = yield user_model_1.User.findOne({ number });
+    return res
+        .status(200)
+        .json(new ApiResponse_1.ApiResponse(200, { available: !user }, "Number check successfully"));
+}));
+UserController.checkEmail = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { email } = req.params;
+    const user = yield user_model_1.User.findOne({ email });
+    return res
+        .status(200)
+        .json(new ApiResponse_1.ApiResponse(200, { available: !user }, "Email check successfully"));
+}));
+UserController.updateUser = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { username, email, number, password } = req.body;
+    if (username) {
+        const user = yield user_model_1.User.findOne({ $or: [username, email, number] });
+        if (user)
+            throw new ApiError_1.ApiError(407, "User with same username, email or number exists");
+    }
+    const user = yield user_model_1.User.findById(req.user._id);
+    if (!user)
+        throw new ApiError_1.ApiError(404, "User not found");
+    const passwordCorrect = user.isPasswordCorrect(password);
+    if (!passwordCorrect)
+        throw new ApiError_1.ApiError(403, "Unauthorized");
+    const updatedUser = yield user_model_1.User.findByIdAndUpdate(req.user._id, req.body);
+    return res
+        .status(200)
+        .json(new ApiResponse_1.ApiResponse(200, { user: updatedUser }, "User updated successfully"));
+}));
+UserController.updateFcmToken = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { fcmToken } = req.body;
+    if (!fcmToken)
+        throw new ApiError_1.ApiError(400, "FCM token is required");
+    req.user.fcmToken = fcmToken;
+    yield req.user.save();
+    return res.status(200).json(new ApiResponse_1.ApiResponse(200, {}, "FCM token updated"));
 }));
