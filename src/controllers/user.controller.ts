@@ -233,15 +233,13 @@ export class UserController {
 
     static updateUserAvatar = asyncHandler(
         async (req: MulterRequest, res: Response): Promise<Response> => {
-            const { files } = req.files as AttachmentRequest;
-
-            if (!files || !files.attachments) {
+            if (!req.file?.path) {
                 throw new ApiError(400, "Avatar file is missing");
             }
 
             console.log("File received");
 
-            const avatar = await uploadOnCloudinary(files.attachments[0].path);
+            const avatar = await uploadOnCloudinary(req.file.path);
             if (!avatar) throw new ApiError(400, "Error while uploading avatar");
 
             const oldUser = await User.findById(req.user?._id).select("avatarId");

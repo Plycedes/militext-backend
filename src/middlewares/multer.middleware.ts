@@ -18,7 +18,7 @@ export interface MulterRequest<T = any> extends Request {
 
 const storage: StorageEngine = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, "./temp/files");
+        cb(null, "./public/images");
     },
     filename: function (req, file, cb) {
         cb(null, uuidv4() + file.originalname);
