@@ -39,81 +39,86 @@ const mountMessageEvent = (io: Server, socket: AuthenticatedSocket): void => {
             content: string;
             attachments?: IAttachment[];
         }) => {
-            if (!socket.user?._id) return;
+            try {
+                if (!socket.user?._id) return;
 
-            // Validate chat
-            const chat = await Chat.findById(chatId);
-            if (!chat) {
-                return socket.emit(ChatEventEnum.SOCKET_ERROR_EVENT, "Chat does not exist");
-            }
+                // Validate chat
+                const chat = await Chat.findById(chatId);
+                if (!chat) {
+                    return socket.emit(ChatEventEnum.SOCKET_ERROR_EVENT, "Chat does not exist");
+                }
 
-            if (!chat.participants.includes(socket.user._id)) {
-                return socket.emit(
-                    ChatEventEnum.SOCKET_ERROR_EVENT,
-                    "Not a participant of this chat"
-                );
-            }
+                if (!chat.participants.includes(socket.user._id)) {
+                    return socket.emit(
+                        ChatEventEnum.SOCKET_ERROR_EVENT,
+                        "Not a participant of this chat"
+                    );
+                }
 
-            // Create message in DB
-            const newMessage = await ChatMessage.create({
-                chat: chatId,
-                sender: socket.user._id,
-                content,
-                attachments,
-            });
+                // Create message in DB
+                const newMessage = await ChatMessage.create({
+                    chat: chatId,
+                    sender: socket.user._id,
+                    content,
+                    attachments,
+                });
 
-            // Populate sender info for frontend
-            const populatedMessage = await ChatMessage.findById(newMessage._id)
-                .populate("sender", "name number avatar")
-                .lean();
+                // Populate sender info for frontend
+                const populatedMessage = await ChatMessage.findById(newMessage._id)
+                    .populate("sender", "name number avatar")
+                    .lean();
 
-            // Find who is online in this chat (in socket room)
-            const roomSockets = await io.in(chatId).fetchSockets();
-            const onlineUserIds = roomSockets.map((s: any) => s.user?._id.toString());
+                // Find who is online in this chat (in socket room)
+                const roomSockets = await io.in(chatId).fetchSockets();
+                const onlineUserIds = roomSockets.map((s: any) => s.user?._id.toString());
 
-            // Update unread counts + lastRead
-            await Promise.all(
-                chat.participants.map(async (participantId: any) => {
-                    const isOnlineInChat = onlineUserIds.includes(participantId.toString());
-                    const isSender = participantId.toString() === socket.user!._id.toString();
+                // Update unread counts + lastRead
+                await Promise.all(
+                    chat.participants.map(async (participantId: any) => {
+                        const isOnlineInChat = onlineUserIds.includes(participantId.toString());
+                        const isSender = participantId.toString() === socket.user!._id.toString();
 
-                    const userChat = await UserChat.findOne({
-                        chatId: chatId,
-                        userId: participantId,
-                    });
+                        const userChat = await UserChat.findOne({
+                            chatId: chatId,
+                            userId: participantId,
+                        });
 
-                    if (!userChat) return;
+                        if (!userChat) return;
 
-                    if (isSender) {
-                        userChat.lastRead = new Date();
-                    } else if (isOnlineInChat) {
-                        userChat.lastRead = new Date();
-                    } else {
-                        userChat.unreadCount += 1;
-                        io.to(participantId.toString()).emit(
-                            ChatEventEnum.NEW_MESSAGE_EVENT,
-                            populatedMessage
-                        );
-                        const offlineUser = await User.findById(participantId);
-                        if (offlineUser?.fcmToken) {
-                            await sendFCMNotification(
-                                offlineUser.fcmToken,
-                                socket.user!.username,
-                                content,
-                                { chatId }
+                        if (isSender) {
+                            userChat.lastRead = new Date();
+                        } else if (isOnlineInChat) {
+                            userChat.lastRead = new Date();
+                        } else {
+                            userChat.unreadCount += 1;
+                            io.to(participantId.toString()).emit(
+                                ChatEventEnum.NEW_MESSAGE_EVENT,
+                                populatedMessage
                             );
+                            const offlineUser = await User.findById(participantId);
+                            if (offlineUser?.fcmToken) {
+                                await sendFCMNotification(
+                                    offlineUser.fcmToken,
+                                    socket.user!.username,
+                                    content,
+                                    { chatId }
+                                );
+                            }
                         }
-                    }
-                    await userChat.save();
-                })
-            );
+                        await userChat.save();
+                    })
+                );
 
-            // Update chat lastMessage
-            chat.lastMessage = newMessage._id as Types.ObjectId;
-            await chat.save();
+                // Update chat lastMessage
+                chat.lastMessage = newMessage._id as Types.ObjectId;
+                await chat.save();
 
-            // Emit message to all participants in chat room
-            io.in(chatId).emit(ChatEventEnum.NEW_MESSAGE_EVENT, populatedMessage);
+                // Emit message to all participants in chat room
+                io.in(chatId).emit(ChatEventEnum.NEW_MESSAGE_EVENT, populatedMessage);
+            } catch (error) {
+                console.log("Error occured", error);
+                io.in(chatId).emit(ChatEventEnum.SOCKET_ERROR_EVENT, error);
+            }
         }
     );
 };

@@ -47,7 +47,6 @@ const chatSchema = new Schema<IChat>(
         },
         avatarId: {
             type: String,
-            required: true,
         },
     },
     { timestamps: true }

@@ -38,61 +38,67 @@ const mountJoinChatEvent = (socket) => {
 const mountMessageEvent = (io, socket) => {
     socket.on(constants_1.ChatEventEnum.NEW_MESSAGE_EVENT, (_a) => __awaiter(void 0, [_a], void 0, function* ({ chatId, content, attachments, }) {
         var _b;
-        if (!((_b = socket.user) === null || _b === void 0 ? void 0 : _b._id))
-            return;
-        // Validate chat
-        const chat = yield chat_model_1.Chat.findById(chatId);
-        if (!chat) {
-            return socket.emit(constants_1.ChatEventEnum.SOCKET_ERROR_EVENT, "Chat does not exist");
-        }
-        if (!chat.participants.includes(socket.user._id)) {
-            return socket.emit(constants_1.ChatEventEnum.SOCKET_ERROR_EVENT, "Not a participant of this chat");
-        }
-        // Create message in DB
-        const newMessage = yield message_model_1.ChatMessage.create({
-            chat: chatId,
-            sender: socket.user._id,
-            content,
-            attachments,
-        });
-        // Populate sender info for frontend
-        const populatedMessage = yield message_model_1.ChatMessage.findById(newMessage._id)
-            .populate("sender", "name number avatar")
-            .lean();
-        // Find who is online in this chat (in socket room)
-        const roomSockets = yield io.in(chatId).fetchSockets();
-        const onlineUserIds = roomSockets.map((s) => { var _a; return (_a = s.user) === null || _a === void 0 ? void 0 : _a._id.toString(); });
-        // Update unread counts + lastRead
-        yield Promise.all(chat.participants.map((participantId) => __awaiter(void 0, void 0, void 0, function* () {
-            const isOnlineInChat = onlineUserIds.includes(participantId.toString());
-            const isSender = participantId.toString() === socket.user._id.toString();
-            const userChat = yield userChat_model_1.UserChat.findOne({
-                chatId: chatId,
-                userId: participantId,
-            });
-            if (!userChat)
+        try {
+            if (!((_b = socket.user) === null || _b === void 0 ? void 0 : _b._id))
                 return;
-            if (isSender) {
-                userChat.lastRead = new Date();
+            // Validate chat
+            const chat = yield chat_model_1.Chat.findById(chatId);
+            if (!chat) {
+                return socket.emit(constants_1.ChatEventEnum.SOCKET_ERROR_EVENT, "Chat does not exist");
             }
-            else if (isOnlineInChat) {
-                userChat.lastRead = new Date();
+            if (!chat.participants.includes(socket.user._id)) {
+                return socket.emit(constants_1.ChatEventEnum.SOCKET_ERROR_EVENT, "Not a participant of this chat");
             }
-            else {
-                userChat.unreadCount += 1;
-                io.to(participantId.toString()).emit(constants_1.ChatEventEnum.NEW_MESSAGE_EVENT, populatedMessage);
-                const offlineUser = yield user_model_1.User.findById(participantId);
-                if (offlineUser === null || offlineUser === void 0 ? void 0 : offlineUser.fcmToken) {
-                    yield (0, fcm_service_1.sendFCMNotification)(offlineUser.fcmToken, socket.user.username, content, { chatId });
+            // Create message in DB
+            const newMessage = yield message_model_1.ChatMessage.create({
+                chat: chatId,
+                sender: socket.user._id,
+                content,
+                attachments,
+            });
+            // Populate sender info for frontend
+            const populatedMessage = yield message_model_1.ChatMessage.findById(newMessage._id)
+                .populate("sender", "name number avatar")
+                .lean();
+            // Find who is online in this chat (in socket room)
+            const roomSockets = yield io.in(chatId).fetchSockets();
+            const onlineUserIds = roomSockets.map((s) => { var _a; return (_a = s.user) === null || _a === void 0 ? void 0 : _a._id.toString(); });
+            // Update unread counts + lastRead
+            yield Promise.all(chat.participants.map((participantId) => __awaiter(void 0, void 0, void 0, function* () {
+                const isOnlineInChat = onlineUserIds.includes(participantId.toString());
+                const isSender = participantId.toString() === socket.user._id.toString();
+                const userChat = yield userChat_model_1.UserChat.findOne({
+                    chatId: chatId,
+                    userId: participantId,
+                });
+                if (!userChat)
+                    return;
+                if (isSender) {
+                    userChat.lastRead = new Date();
                 }
-            }
-            yield userChat.save();
-        })));
-        // Update chat lastMessage
-        chat.lastMessage = newMessage._id;
-        yield chat.save();
-        // Emit message to all participants in chat room
-        io.in(chatId).emit(constants_1.ChatEventEnum.NEW_MESSAGE_EVENT, populatedMessage);
+                else if (isOnlineInChat) {
+                    userChat.lastRead = new Date();
+                }
+                else {
+                    userChat.unreadCount += 1;
+                    io.to(participantId.toString()).emit(constants_1.ChatEventEnum.NEW_MESSAGE_EVENT, populatedMessage);
+                    const offlineUser = yield user_model_1.User.findById(participantId);
+                    if (offlineUser === null || offlineUser === void 0 ? void 0 : offlineUser.fcmToken) {
+                        yield (0, fcm_service_1.sendFCMNotification)(offlineUser.fcmToken, socket.user.username, content, { chatId });
+                    }
+                }
+                yield userChat.save();
+            })));
+            // Update chat lastMessage
+            chat.lastMessage = newMessage._id;
+            yield chat.save();
+            // Emit message to all participants in chat room
+            io.in(chatId).emit(constants_1.ChatEventEnum.NEW_MESSAGE_EVENT, populatedMessage);
+        }
+        catch (error) {
+            console.log("Error occured", error);
+            io.in(chatId).emit(constants_1.ChatEventEnum.SOCKET_ERROR_EVENT, error);
+        }
     }));
 };
 const mountParticipantTypingEvent = (socket) => {

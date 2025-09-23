@@ -70,7 +70,6 @@ const chatSchema = new mongoose_1.Schema({
     },
     avatarId: {
         type: String,
-        required: true,
     },
 }, { timestamps: true });
 exports.Chat = mongoose_1.default.models.Chat || mongoose_1.default.model("Chat", chatSchema);
