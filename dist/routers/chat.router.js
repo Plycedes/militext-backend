@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const chat_controller_1 = require("../controllers/chat.controller");
 const auth_middleware_1 = require("../middlewares/auth.middleware");
+const multer_middleware_1 = require("../middlewares/multer.middleware");
 const router = (0, express_1.Router)();
 router.use(auth_middleware_1.verifyJWT);
 router.route("/").get(chat_controller_1.ChatController.getAllChats);
@@ -16,7 +17,8 @@ router
     .route("/group/:chatId")
     .get(chat_controller_1.ChatController.getGroupChatDetails)
     .patch(chat_controller_1.ChatController.renameGroupChat)
-    .delete(chat_controller_1.ChatController.deleteGroupChat);
+    .delete(chat_controller_1.ChatController.deleteGroupChat)
+    .post(multer_middleware_1.upload.single("avatar"), chat_controller_1.ChatController.updateGroupAvatar);
 router
     .route("/group/:chatId/:participantNum")
     .post(chat_controller_1.ChatController.addNewParticipantInGroupChat)

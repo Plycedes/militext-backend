@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { ChatController } from "../controllers/chat.controller";
 import { verifyJWT } from "../middlewares/auth.middleware";
+import { upload } from "../middlewares/multer.middleware";
 
 const router = Router();
 
@@ -21,7 +22,8 @@ router
     .route("/group/:chatId")
     .get(ChatController.getGroupChatDetails)
     .patch(ChatController.renameGroupChat)
-    .delete(ChatController.deleteGroupChat);
+    .delete(ChatController.deleteGroupChat)
+    .post(upload.single("avatar"), ChatController.updateGroupAvatar);
 
 router
     .route("/group/:chatId/:participantNum")

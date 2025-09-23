@@ -11,6 +11,7 @@ import { ApiError } from "../utils/ApiError";
 import { emitSocketEvent } from "../socket";
 import { ChatEventEnum } from "../constants";
 import { UserChat } from "../models/userChat.model";
+import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary";
 
 const chatCommonAggregation = (): PipelineStage[] => [
     {
@@ -485,6 +486,31 @@ export class ChatController {
         return res
             .status(200)
             .json(new ApiResponse(200, chat[0], "Group chat name updated successfully"));
+    });
+
+    static updateGroupAvatar = asyncHandler(async (req: AuthRequest, res: Response) => {
+        const { chatId } = req.params;
+        if (!req.file?.path) {
+            throw new ApiError(400, "Avatar file is missing");
+        }
+
+        console.log("File received");
+
+        const avatar = await uploadOnCloudinary(req.file.path);
+        if (!avatar) throw new ApiError(400, "Error while uploading avatar");
+
+        const oldChat = await Chat.findById(req.user?._id).select("avatarId");
+        if (oldChat?.avatarId) {
+            await deleteFromCloudinary(oldChat.avatarId);
+        }
+
+        const chat = await Chat.findByIdAndUpdate(
+            chatId,
+            { avatar: avatar.url, avatarId: avatar.public_id },
+            { new: true }
+        );
+
+        return res.status(200).json(new ApiResponse(200, chat, "Avatar updated successfully"));
     });
 
     static deleteGroupChat = asyncHandler(async (req: AuthRequest, res: Response) => {

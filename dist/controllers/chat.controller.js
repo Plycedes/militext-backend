@@ -25,6 +25,7 @@ const ApiError_1 = require("../utils/ApiError");
 const socket_1 = require("../socket");
 const constants_1 = require("../constants");
 const userChat_model_1 = require("../models/userChat.model");
+const cloudinary_1 = require("../utils/cloudinary");
 const chatCommonAggregation = () => [
     {
         $lookup: {
@@ -440,6 +441,23 @@ ChatController.renameGroupChat = (0, asyncHandler_1.asyncHandler)((req, res) => 
     return res
         .status(200)
         .json(new ApiResponse_1.ApiResponse(200, chat[0], "Group chat name updated successfully"));
+}));
+ChatController.updateGroupAvatar = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _b, _c;
+    const { chatId } = req.params;
+    if (!((_b = req.file) === null || _b === void 0 ? void 0 : _b.path)) {
+        throw new ApiError_1.ApiError(400, "Avatar file is missing");
+    }
+    console.log("File received");
+    const avatar = yield (0, cloudinary_1.uploadOnCloudinary)(req.file.path);
+    if (!avatar)
+        throw new ApiError_1.ApiError(400, "Error while uploading avatar");
+    const oldChat = yield chat_model_1.Chat.findById((_c = req.user) === null || _c === void 0 ? void 0 : _c._id).select("avatarId");
+    if (oldChat === null || oldChat === void 0 ? void 0 : oldChat.avatarId) {
+        yield (0, cloudinary_1.deleteFromCloudinary)(oldChat.avatarId);
+    }
+    const chat = yield chat_model_1.Chat.findByIdAndUpdate(chatId, { avatar: avatar.url, avatarId: avatar.public_id }, { new: true });
+    return res.status(200).json(new ApiResponse_1.ApiResponse(200, chat, "Avatar updated successfully"));
 }));
 ChatController.deleteGroupChat = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _b, _c, _d;

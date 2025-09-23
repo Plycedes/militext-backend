@@ -160,20 +160,19 @@ UserController.getCurrentUser = (0, asyncHandler_1.asyncHandler)((req, res) => _
         .json(new ApiResponse_1.ApiResponse(200, user, "Current User fetched successfully"));
 }));
 UserController.updateUserAvatar = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b, _c;
-    const { files } = req.files;
-    if (!files || !files.attachments) {
+    var _b, _c, _d;
+    if (!((_b = req.file) === null || _b === void 0 ? void 0 : _b.path)) {
         throw new ApiError_1.ApiError(400, "Avatar file is missing");
     }
     console.log("File received");
-    const avatar = yield (0, cloudinary_1.uploadOnCloudinary)(files.attachments[0].path);
+    const avatar = yield (0, cloudinary_1.uploadOnCloudinary)(req.file.path);
     if (!avatar)
         throw new ApiError_1.ApiError(400, "Error while uploading avatar");
-    const oldUser = yield user_model_1.User.findById((_b = req.user) === null || _b === void 0 ? void 0 : _b._id).select("avatarId");
+    const oldUser = yield user_model_1.User.findById((_c = req.user) === null || _c === void 0 ? void 0 : _c._id).select("avatarId");
     if (oldUser === null || oldUser === void 0 ? void 0 : oldUser.avatarId) {
         yield (0, cloudinary_1.deleteFromCloudinary)(oldUser.avatarId);
     }
-    const user = yield user_model_1.User.findByIdAndUpdate((_c = req.user) === null || _c === void 0 ? void 0 : _c._id, { avatar: avatar.url, avatarId: avatar.public_id }, { new: true }).select("-password");
+    const user = yield user_model_1.User.findByIdAndUpdate((_d = req.user) === null || _d === void 0 ? void 0 : _d._id, { avatar: avatar.url, avatarId: avatar.public_id }, { new: true }).select("-password");
     return res.status(200).json(new ApiResponse_1.ApiResponse(200, user, "Avatar updated successfully"));
 }));
 UserController.checkUsername = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
