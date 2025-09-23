@@ -36,7 +36,7 @@ const mountJoinChatEvent = (socket) => {
     });
 };
 const mountMessageEvent = (io, socket) => {
-    socket.on(constants_1.ChatEventEnum.NEW_MESSAGE_EVENT, (_a) => __awaiter(void 0, [_a], void 0, function* ({ chatId, content }) {
+    socket.on(constants_1.ChatEventEnum.NEW_MESSAGE_EVENT, (_a) => __awaiter(void 0, [_a], void 0, function* ({ chatId, content, attachments, }) {
         var _b;
         if (!((_b = socket.user) === null || _b === void 0 ? void 0 : _b._id))
             return;
@@ -53,6 +53,7 @@ const mountMessageEvent = (io, socket) => {
             chat: chatId,
             sender: socket.user._id,
             content,
+            attachments,
         });
         // Populate sender info for frontend
         const populatedMessage = yield message_model_1.ChatMessage.findById(newMessage._id)
@@ -65,7 +66,10 @@ const mountMessageEvent = (io, socket) => {
         yield Promise.all(chat.participants.map((participantId) => __awaiter(void 0, void 0, void 0, function* () {
             const isOnlineInChat = onlineUserIds.includes(participantId.toString());
             const isSender = participantId.toString() === socket.user._id.toString();
-            const userChat = yield userChat_model_1.UserChat.findOne({ chatId: chatId, userId: participantId });
+            const userChat = yield userChat_model_1.UserChat.findOne({
+                chatId: chatId,
+                userId: participantId,
+            });
             if (!userChat)
                 return;
             if (isSender) {

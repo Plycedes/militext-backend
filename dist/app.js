@@ -33,7 +33,7 @@ app.use(express_1.default.json({ limit: "16kb" }));
 app.use(express_1.default.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express_1.default.static("public"));
 app.use((0, cookie_parser_1.default)());
-if (false) {
+if (true) {
     app.use(morgan_middleware_1.successLogger);
     app.use(morgan_middleware_1.errorLogger);
 }

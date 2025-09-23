@@ -24,6 +24,7 @@ const helpers_1 = require("../utils/helpers");
 const socket_1 = require("../socket");
 const constants_1 = require("../constants");
 const userChat_model_1 = require("../models/userChat.model");
+const cloudinary_1 = require("../utils/cloudinary");
 const chatMessageCommonAggregation = () => {
     return [
         {
@@ -168,7 +169,8 @@ MessageController.deleteMessage = (0, asyncHandler_1.asyncHandler)((req, res) =>
         throw new ApiError_1.ApiError(403, "Not authorized to delete");
     }
     if (message.attachments.length > 0) {
-        message.attachments.forEach((asset) => (0, helpers_1.removeLocalFile)(asset.localPath));
+        const deletePromises = message.attachments.map((asset) => (0, cloudinary_1.deleteFromCloudinary)(asset.publicId));
+        yield Promise.all(deletePromises);
     }
     yield message_model_1.ChatMessage.deleteOne({ _id: new mongoose_1.default.Types.ObjectId(messageId) });
     if (((_b = chat.lastMessage) === null || _b === void 0 ? void 0 : _b.toString()) === message._id) {
@@ -183,4 +185,24 @@ MessageController.deleteMessage = (0, asyncHandler_1.asyncHandler)((req, res) =>
         (0, socket_1.emitSocketEvent)(req, participantsObjectID.toString(), constants_1.ChatEventEnum.MESSAGE_DELETE_EVENT, message);
     });
     return res.status(200).json(new ApiResponse_1.ApiResponse(200, message, "Message deleted successfully"));
+}));
+MessageController.uploadMessageAttachments = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const files = req.files;
+    if (!files || files.length === 0) {
+        throw new ApiError_1.ApiError(400, "No attachments provided");
+    }
+    const uploadPromises = files.map((attachment) => (0, cloudinary_1.uploadOnCloudinary)(attachment.path));
+    const results = yield Promise.all(uploadPromises);
+    const uploadedFiles = results
+        .filter((r) => r) // drop failed uploads if any
+        .map((result) => ({
+        url: result.url,
+        publicId: result.public_id,
+    }));
+    if (!uploadedFiles.length) {
+        throw new ApiError_1.ApiError(400, "Error while uploading attachments");
+    }
+    return res
+        .status(201)
+        .json(new ApiResponse_1.ApiResponse(201, uploadedFiles, "Attachments uploaded successfully"));
 }));

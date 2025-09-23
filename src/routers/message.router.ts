@@ -15,5 +15,8 @@ router
 //Delete message route based on Message id
 
 router.route("/:chatId/:messageId").delete(MessageController.deleteMessage);
+router
+    .route("/message/attachments/upload")
+    .post(upload.array("attachments", 10), MessageController.uploadMessageAttachments);
 
 export default router;

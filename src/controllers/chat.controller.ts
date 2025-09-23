@@ -143,13 +143,15 @@ const deleteCascadeChatMessages = async (chatId: string | Types.ObjectId): Promi
         chat: new mongoose.Types.ObjectId(chatId),
     });
 
-    let attachments: { localPath: string }[] = [];
+    let attachments: { publicId: string }[] = [];
 
     attachments = attachments.concat(...messages.map((message) => message.attachments));
 
-    attachments.forEach((attachment) => {
-        removeLocalFile(attachment.localPath);
+    const deletePromises = attachments.map((attachment) => {
+        deleteFromCloudinary(attachment.publicId);
     });
+
+    await Promise.all(deletePromises);
 
     await ChatMessage.deleteMany({
         chat: new mongoose.Types.ObjectId(chatId),

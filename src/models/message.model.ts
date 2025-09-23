@@ -1,8 +1,8 @@
 import mongoose, { Schema, Document, Types, Model } from "mongoose";
 
-interface IAttachment {
+export interface IAttachment {
     url: string;
-    localPath: string;
+    publicId: string;
 }
 
 export interface IMessage extends Document {
@@ -29,7 +29,7 @@ const messageSchema = new Schema<IMessage>(
             type: [
                 {
                     url: { type: String, required: true },
-                    localPath: { type: String, required: true },
+                    publicId: { type: String, required: true },
                 },
             ],
             default: [],

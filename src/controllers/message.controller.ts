@@ -11,6 +11,7 @@ import { getLocalPath, getStaticFilePath, removeLocalFile } from "../utils/helpe
 import { emitSocketEvent } from "../socket";
 import { ChatEventEnum } from "../constants";
 import { UserChat } from "../models/userChat.model";
+import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary";
 
 type AttachmentRequest = Request & {
     files?: { attachments?: Express.Multer.File[] };
@@ -196,7 +197,10 @@ export class MessageController {
         }
 
         if (message.attachments.length > 0) {
-            message.attachments.forEach((asset) => removeLocalFile(asset.localPath));
+            const deletePromises = message.attachments.map((asset) =>
+                deleteFromCloudinary(asset.publicId)
+            );
+            await Promise.all(deletePromises);
         }
 
         await ChatMessage.deleteOne({ _id: new mongoose.Types.ObjectId(messageId) });
@@ -225,5 +229,32 @@ export class MessageController {
         });
 
         return res.status(200).json(new ApiResponse(200, message, "Message deleted successfully"));
+    });
+
+    static uploadMessageAttachments = asyncHandler(async (req: AuthRequest, res: Response) => {
+        const files = req.files as Express.Multer.File[];
+
+        if (!files || files.length === 0) {
+            throw new ApiError(400, "No attachments provided");
+        }
+
+        const uploadPromises = files.map((attachment) => uploadOnCloudinary(attachment.path));
+
+        const results = await Promise.all(uploadPromises);
+
+        const uploadedFiles = results
+            .filter((r) => r) // drop failed uploads if any
+            .map((result) => ({
+                url: result!.url,
+                publicId: result!.public_id,
+            }));
+
+        if (!uploadedFiles.length) {
+            throw new ApiError(400, "Error while uploading attachments");
+        }
+
+        return res
+            .status(201)
+            .json(new ApiResponse(201, uploadedFiles, "Attachments uploaded successfully"));
     });
 }

@@ -34,7 +34,7 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
 
-if (false) {
+if (true) {
     app.use(successLogger);
     app.use(errorLogger);
 }

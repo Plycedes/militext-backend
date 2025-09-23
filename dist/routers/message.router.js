@@ -12,4 +12,7 @@ router
     .post(multer_middleware_1.upload.fields([{ name: "attachments", maxCount: 30 }]), message_controller_1.MessageController.sendMessage);
 //Delete message route based on Message id
 router.route("/:chatId/:messageId").delete(message_controller_1.MessageController.deleteMessage);
+router
+    .route("/message/attachments/upload")
+    .post(multer_middleware_1.upload.array("attachments", 10), message_controller_1.MessageController.uploadMessageAttachments);
 exports.default = router;

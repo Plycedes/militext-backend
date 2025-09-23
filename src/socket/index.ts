@@ -8,7 +8,7 @@ import { ApiError } from "../utils/ApiError";
 import { Request } from "express";
 import { AuthenticatedSocket } from "../types/types";
 import { Chat } from "../models/chat.model";
-import { ChatMessage } from "../models/message.model";
+import { ChatMessage, IAttachment } from "../models/message.model";
 import { UserChat } from "../models/userChat.model";
 import { Types } from "mongoose";
 import { sendFCMNotification } from "../services/fcm.service";
@@ -28,76 +28,94 @@ const mountJoinChatEvent = (socket: AuthenticatedSocket): void => {
 };
 
 const mountMessageEvent = (io: Server, socket: AuthenticatedSocket): void => {
-    socket.on(ChatEventEnum.NEW_MESSAGE_EVENT, async ({ chatId, content }) => {
-        if (!socket.user?._id) return;
-
-        // Validate chat
-        const chat = await Chat.findById(chatId);
-        if (!chat) {
-            return socket.emit(ChatEventEnum.SOCKET_ERROR_EVENT, "Chat does not exist");
-        }
-
-        if (!chat.participants.includes(socket.user._id)) {
-            return socket.emit(ChatEventEnum.SOCKET_ERROR_EVENT, "Not a participant of this chat");
-        }
-
-        // Create message in DB
-        const newMessage = await ChatMessage.create({
-            chat: chatId,
-            sender: socket.user._id,
+    socket.on(
+        ChatEventEnum.NEW_MESSAGE_EVENT,
+        async ({
+            chatId,
             content,
-        });
+            attachments,
+        }: {
+            chatId: string;
+            content: string;
+            attachments?: IAttachment[];
+        }) => {
+            if (!socket.user?._id) return;
 
-        // Populate sender info for frontend
-        const populatedMessage = await ChatMessage.findById(newMessage._id)
-            .populate("sender", "name number avatar")
-            .lean();
+            // Validate chat
+            const chat = await Chat.findById(chatId);
+            if (!chat) {
+                return socket.emit(ChatEventEnum.SOCKET_ERROR_EVENT, "Chat does not exist");
+            }
 
-        // Find who is online in this chat (in socket room)
-        const roomSockets = await io.in(chatId).fetchSockets();
-        const onlineUserIds = roomSockets.map((s: any) => s.user?._id.toString());
+            if (!chat.participants.includes(socket.user._id)) {
+                return socket.emit(
+                    ChatEventEnum.SOCKET_ERROR_EVENT,
+                    "Not a participant of this chat"
+                );
+            }
 
-        // Update unread counts + lastRead
-        await Promise.all(
-            chat.participants.map(async (participantId: any) => {
-                const isOnlineInChat = onlineUserIds.includes(participantId.toString());
-                const isSender = participantId.toString() === socket.user!._id.toString();
+            // Create message in DB
+            const newMessage = await ChatMessage.create({
+                chat: chatId,
+                sender: socket.user._id,
+                content,
+                attachments,
+            });
 
-                const userChat = await UserChat.findOne({ chatId: chatId, userId: participantId });
+            // Populate sender info for frontend
+            const populatedMessage = await ChatMessage.findById(newMessage._id)
+                .populate("sender", "name number avatar")
+                .lean();
 
-                if (!userChat) return;
+            // Find who is online in this chat (in socket room)
+            const roomSockets = await io.in(chatId).fetchSockets();
+            const onlineUserIds = roomSockets.map((s: any) => s.user?._id.toString());
 
-                if (isSender) {
-                    userChat.lastRead = new Date();
-                } else if (isOnlineInChat) {
-                    userChat.lastRead = new Date();
-                } else {
-                    userChat.unreadCount += 1;
-                    io.to(participantId.toString()).emit(
-                        ChatEventEnum.NEW_MESSAGE_EVENT,
-                        populatedMessage
-                    );
-                    const offlineUser = await User.findById(participantId);
-                    if (offlineUser?.fcmToken) {
-                        await sendFCMNotification(
-                            offlineUser.fcmToken,
-                            socket.user!.username,
-                            content,
-                            { chatId }
+            // Update unread counts + lastRead
+            await Promise.all(
+                chat.participants.map(async (participantId: any) => {
+                    const isOnlineInChat = onlineUserIds.includes(participantId.toString());
+                    const isSender = participantId.toString() === socket.user!._id.toString();
+
+                    const userChat = await UserChat.findOne({
+                        chatId: chatId,
+                        userId: participantId,
+                    });
+
+                    if (!userChat) return;
+
+                    if (isSender) {
+                        userChat.lastRead = new Date();
+                    } else if (isOnlineInChat) {
+                        userChat.lastRead = new Date();
+                    } else {
+                        userChat.unreadCount += 1;
+                        io.to(participantId.toString()).emit(
+                            ChatEventEnum.NEW_MESSAGE_EVENT,
+                            populatedMessage
                         );
+                        const offlineUser = await User.findById(participantId);
+                        if (offlineUser?.fcmToken) {
+                            await sendFCMNotification(
+                                offlineUser.fcmToken,
+                                socket.user!.username,
+                                content,
+                                { chatId }
+                            );
+                        }
                     }
-                }
-                await userChat.save();
-            })
-        );
+                    await userChat.save();
+                })
+            );
 
-        // Update chat lastMessage
-        chat.lastMessage = newMessage._id as Types.ObjectId;
-        await chat.save();
+            // Update chat lastMessage
+            chat.lastMessage = newMessage._id as Types.ObjectId;
+            await chat.save();
 
-        // Emit message to all participants in chat room
-        io.in(chatId).emit(ChatEventEnum.NEW_MESSAGE_EVENT, populatedMessage);
-    });
+            // Emit message to all participants in chat room
+            io.in(chatId).emit(ChatEventEnum.NEW_MESSAGE_EVENT, populatedMessage);
+        }
+    );
 };
 
 const mountParticipantTypingEvent = (socket: AuthenticatedSocket): void => {

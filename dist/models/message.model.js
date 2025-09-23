@@ -49,7 +49,7 @@ const messageSchema = new mongoose_1.Schema({
         type: [
             {
                 url: { type: String, required: true },
-                localPath: { type: String, required: true },
+                publicId: { type: String, required: true },
             },
         ],
         default: [],

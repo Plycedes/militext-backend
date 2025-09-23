@@ -17,7 +17,6 @@ exports.ChatController = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const chat_model_1 = require("../models/chat.model");
 const message_model_1 = require("../models/message.model");
-const helpers_1 = require("../utils/helpers");
 const asyncHandler_1 = require("../utils/asyncHandler");
 const user_model_1 = require("../models/user.model");
 const ApiResponse_1 = require("../utils/ApiResponse");
@@ -155,9 +154,10 @@ const deleteCascadeChatMessages = (chatId) => __awaiter(void 0, void 0, void 0, 
     });
     let attachments = [];
     attachments = attachments.concat(...messages.map((message) => message.attachments));
-    attachments.forEach((attachment) => {
-        (0, helpers_1.removeLocalFile)(attachment.localPath);
+    const deletePromises = attachments.map((attachment) => {
+        (0, cloudinary_1.deleteFromCloudinary)(attachment.publicId);
     });
+    yield Promise.all(deletePromises);
     yield message_model_1.ChatMessage.deleteMany({
         chat: new mongoose_1.default.Types.ObjectId(chatId),
     });
