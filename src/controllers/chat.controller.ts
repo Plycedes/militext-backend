@@ -515,78 +515,22 @@ export class ChatController {
         return res.status(200).json(new ApiResponse(200, chat, "Avatar updated successfully"));
     });
 
-    static deleteGroupChat = asyncHandler(async (req: AuthRequest, res: Response) => {
+    static deleteChat = asyncHandler(async (req: AuthRequest, res: Response) => {
         const { chatId } = req.params;
-
-        const groupChat = await Chat.aggregate([
-            {
-                $match: {
-                    _id: new mongoose.Types.ObjectId(chatId),
-                    isGroupChat: true,
-                },
-            },
-            ...chatCommonAggregation(),
-        ]);
-
-        const chat = groupChat[0];
+        const chat = await Chat.findById(chatId);
 
         if (!chat) {
-            throw new ApiError(404, "Group chat does not exist");
+            throw new ApiError(404, "Chat not found");
         }
 
-        if (chat.admin?.toString() !== req.user!._id?.toString()) {
-            throw new ApiError(404, "Only admin can delete the group");
+        if (!chat.participants.includes(req.user!._id)) {
+            throw new ApiError(400, "User not a particiapant of this chat");
         }
 
-        await Chat.findByIdAndDelete(chatId);
+        chat.deletedBy.push(req.user!._id);
+        chat.save();
 
-        await deleteCascadeChatMessages(chatId);
-
-        chat?.participants?.forEach((participant: IUser) => {
-            if (participant._id.toString() === req.user!._id.toString()) return;
-            emitSocketEvent(req, participant._id?.toString(), ChatEventEnum.LEAVE_CHAT_EVENT, chat);
-        });
-
-        return res.status(200).json(new ApiResponse(200, {}, "Group chat deleted successfully"));
-    });
-
-    static deleteOneOnOneChat = asyncHandler(async (req: AuthRequest, res: Response) => {
-        const { chatId } = req.params;
-
-        const chat = await Chat.aggregate([
-            {
-                $match: {
-                    _id: new mongoose.Types.ObjectId(chatId),
-                },
-            },
-            ...chatCommonAggregation(),
-        ]);
-
-        const payload = chat[0];
-
-        if (!payload) {
-            throw new ApiError(404, "Chat does not exist");
-        }
-
-        await Chat.findByIdAndDelete(chatId);
-
-        await deleteCascadeChatMessages(chatId);
-
-        const otherParticipant = payload?.participants?.find(
-            (participant: IUser & { _id: Types.ObjectId }) =>
-                participant?._id.toString() !== req.user!._id.toString()
-        );
-
-        if (otherParticipant) {
-            emitSocketEvent(
-                req,
-                otherParticipant._id?.toString(),
-                ChatEventEnum.LEAVE_CHAT_EVENT,
-                payload
-            );
-        }
-
-        return res.status(200).json(new ApiResponse(200, {}, "Chat deleted successfully"));
+        return res.status(200).json(new ApiResponse(200, chat, "Chat marked deleted successfully"));
     });
 
     static leaveGroupChat = asyncHandler(async (req: AuthRequest, res: Response) => {
@@ -797,6 +741,7 @@ export class ChatController {
             {
                 $match: {
                     participants: { $elemMatch: { $eq: userId } },
+                    deletedBy: { $ne: userId },
                 },
             },
             {

@@ -9,6 +9,7 @@ export interface IChat extends Document {
     superAdmin?: Types.ObjectId | string;
     avatar?: string;
     avatarId?: string;
+    deletedBy: Types.ObjectId[];
 }
 
 const chatSchema = new Schema<IChat>(
@@ -48,6 +49,12 @@ const chatSchema = new Schema<IChat>(
         avatarId: {
             type: String,
         },
+        deletedBy: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "User",
+            },
+        ],
     },
     { timestamps: true }
 );

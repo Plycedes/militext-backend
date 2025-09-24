@@ -19,6 +19,7 @@ export const ChatEventEnum = {
     MESSAGE_DELETE_EVENT: "messageDeleted",
     NEW_MESSAGE_EVENT: "newMessage",
     SOCEKT_CONNECT_ERROR: "connectError",
+    CHAT_DELETE_EVENT: "chatDeleted",
 } as const;
 
 export const AvailableChatEvents = Object.values(ChatEventEnum);

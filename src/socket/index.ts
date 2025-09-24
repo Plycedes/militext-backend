@@ -111,6 +111,7 @@ const mountMessageEvent = (io: Server, socket: AuthenticatedSocket): void => {
 
                 // Update chat lastMessage
                 chat.lastMessage = newMessage._id as Types.ObjectId;
+                chat.deletedBy = [];
                 await chat.save();
 
                 // Emit message to all participants in chat room

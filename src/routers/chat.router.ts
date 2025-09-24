@@ -16,7 +16,7 @@ router.route("/group").post(ChatController.createAGroupChat);
 
 router.route("/leave/group/:chatId").delete(ChatController.leaveGroupChat);
 
-router.route("/remove/:chatId").delete(ChatController.deleteOneOnOneChat);
+router.route("/remove/:chatId").delete(ChatController.deleteChat);
 
 router.route("/promote").post(ChatController.promoteToAdmin);
 router.route("/demote").post(ChatController.demoteFromAdmin);
@@ -31,7 +31,6 @@ router
     .route("/group/:chatId")
     .get(ChatController.getGroupChatDetails)
     .patch(ChatController.renameGroupChat)
-    .delete(ChatController.deleteGroupChat)
     .post(upload.single("avatar"), ChatController.updateGroupAvatar);
 
 router
