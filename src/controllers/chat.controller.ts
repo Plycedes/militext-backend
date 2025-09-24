@@ -493,7 +493,7 @@ export class ChatController {
     static updateGroupAvatar = asyncHandler(async (req: AuthRequest, res: Response) => {
         const { chatId } = req.params;
         if (!req.file?.path) {
-            throw new ApiError(400, "Avatar file is missing");
+            throw new ApiError(400, "Avatar file is missing!!");
         }
 
         console.log("File received");

@@ -446,7 +446,7 @@ ChatController.updateGroupAvatar = (0, asyncHandler_1.asyncHandler)((req, res) =
     var _b, _c;
     const { chatId } = req.params;
     if (!((_b = req.file) === null || _b === void 0 ? void 0 : _b.path)) {
-        throw new ApiError_1.ApiError(400, "Avatar file is missing");
+        throw new ApiError_1.ApiError(400, "Avatar file is missing!!");
     }
     console.log("File received");
     const avatar = yield (0, cloudinary_1.uploadOnCloudinary)(req.file.path);

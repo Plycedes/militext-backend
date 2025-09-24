@@ -7,7 +7,7 @@ export interface IAttachment {
 
 export interface IMessage extends Document {
     sender: Types.ObjectId;
-    content: string;
+    content?: string;
     attachments: IAttachment[];
     chat: Types.ObjectId;
     createdAt?: Date;
@@ -23,7 +23,6 @@ const messageSchema = new Schema<IMessage>(
         },
         content: {
             type: String,
-            required: true,
         },
         attachments: {
             type: [

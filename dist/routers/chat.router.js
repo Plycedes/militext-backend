@@ -6,13 +6,19 @@ const auth_middleware_1 = require("../middlewares/auth.middleware");
 const multer_middleware_1 = require("../middlewares/multer.middleware");
 const router = (0, express_1.Router)();
 router.use(auth_middleware_1.verifyJWT);
+// ---- Static routes first ----
 router.route("/").get(chat_controller_1.ChatController.getAllChats);
 router.route("/users").get(chat_controller_1.ChatController.searchAvailableUsers);
+router.route("/group").post(chat_controller_1.ChatController.createAGroupChat);
+router.route("/leave/group/:chatId").delete(chat_controller_1.ChatController.leaveGroupChat);
+router.route("/remove/:chatId").delete(chat_controller_1.ChatController.deleteOneOnOneChat);
+router.route("/promote").post(chat_controller_1.ChatController.promoteToAdmin);
+router.route("/demote").post(chat_controller_1.ChatController.demoteFromAdmin);
+// ---- Dynamic routes after ----
 router
     .route("/c/:receiverId")
     .get(chat_controller_1.ChatController.getAOneOnOneChat)
     .post(chat_controller_1.ChatController.createAOneOnOneChat);
-router.route("/group").post(chat_controller_1.ChatController.createAGroupChat);
 router
     .route("/group/:chatId")
     .get(chat_controller_1.ChatController.getGroupChatDetails)
@@ -23,8 +29,4 @@ router
     .route("/group/:chatId/:participantNum")
     .post(chat_controller_1.ChatController.addNewParticipantInGroupChat)
     .delete(chat_controller_1.ChatController.removeParticipantFromGroupChat);
-router.route("/leave/group/:chatId").delete(chat_controller_1.ChatController.leaveGroupChat);
-router.route("/remove/:chatId").delete(chat_controller_1.ChatController.deleteOneOnOneChat);
-router.route("/group/promote").post(chat_controller_1.ChatController.promoteToAdmin);
-router.route("/group/demote").post(chat_controller_1.ChatController.demoteFromAdmin);
 exports.default = router;

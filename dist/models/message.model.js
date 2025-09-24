@@ -43,7 +43,6 @@ const messageSchema = new mongoose_1.Schema({
     },
     content: {
         type: String,
-        required: true,
     },
     attachments: {
         type: [

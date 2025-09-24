@@ -33,6 +33,8 @@ const errorHandler: ErrorRequestHandler = (
         ...(process.env.NODE_ENV === "development" ? { stack: error.stack } : {}),
     };
 
+    res.locals.errorMessage = error.message;
+
     console.error(`${error.message}`);
 
     // If you want to support MulterRequest safely:

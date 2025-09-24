@@ -18,6 +18,7 @@ const errorHandler = (err, req, res, next) => {
         error = new ApiError_1.ApiError(statusCode, message, (error === null || error === void 0 ? void 0 : error.errors) || [], error.stack);
     }
     const response = Object.assign({ statusCode: error.statusCode, message: error.message }, (process.env.NODE_ENV === "development" ? { stack: error.stack } : {}));
+    res.locals.errorMessage = error.message;
     console.error(`${error.message}`);
     // If you want to support MulterRequest safely:
     if ("file" in req) {
