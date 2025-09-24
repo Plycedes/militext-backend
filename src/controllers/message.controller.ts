@@ -172,8 +172,13 @@ export class MessageController {
             .json(new ApiResponse(201, receivedMessage, "Message saved successfully"));
     });
 
-    static deleteMessage = asyncHandler(async (req: AuthRequest, res: Response) => {
-        const { chatId, messageId } = req.params;
+    static deleteMessages = asyncHandler(async (req: AuthRequest, res: Response) => {
+        const { chatId } = req.params;
+        const { messageIds } = req.body as { messageIds: string[] };
+
+        if (!Array.isArray(messageIds) || messageIds.length === 0) {
+            throw new ApiError(400, "No message IDs provided");
+        }
 
         const chat = await Chat.findOne({
             _id: new mongoose.Types.ObjectId(chatId),
@@ -184,28 +189,28 @@ export class MessageController {
             throw new ApiError(404, "Chat does not exist");
         }
 
-        const message = await ChatMessage.findOne({
-            _id: new mongoose.Types.ObjectId(messageId),
+        const messages = await ChatMessage.find({
+            _id: { $in: messageIds.map((id) => new mongoose.Types.ObjectId(id)) },
         });
 
-        if (!message) {
-            throw new ApiError(404, "Message does not exits");
+        if (messages.length === 0) {
+            throw new ApiError(404, "No messages found");
         }
 
-        if (message.sender.toString() !== req.user!._id.toString()) {
-            throw new ApiError(403, "Not authorized to delete");
+        const unauthorized = messages.some(
+            (msg) => msg.sender.toString() !== req.user!._id.toString()
+        );
+        if (unauthorized) {
+            throw new ApiError(403, "Not authorized to delete one or more messages");
         }
 
-        if (message.attachments.length > 0) {
-            const deletePromises = message.attachments.map((asset) =>
-                deleteFromCloudinary(asset.publicId)
-            );
-            await Promise.all(deletePromises);
-        }
+        const allAttachments = messages.flatMap((msg) => msg.attachments || []);
 
-        await ChatMessage.deleteOne({ _id: new mongoose.Types.ObjectId(messageId) });
+        await ChatMessage.deleteMany({
+            _id: { $in: messageIds.map((id) => new mongoose.Types.ObjectId(id)) },
+        });
 
-        if (chat.lastMessage?.toString() === (message._id as string)) {
+        if (chat.lastMessage && messageIds.includes(chat.lastMessage.toString())) {
             const lastMessage = await ChatMessage.findOne(
                 { chat: chatId },
                 {},
@@ -217,18 +222,22 @@ export class MessageController {
             });
         }
 
-        chat.participants.forEach((participantsObjectID: Types.ObjectId) => {
-            if (participantsObjectID.toString() === req.user!._id.toString()) return;
+        emitSocketEvent(req, chatId, ChatEventEnum.MESSAGE_DELETE_EVENT, {});
 
-            emitSocketEvent(
-                req,
-                participantsObjectID.toString(),
-                ChatEventEnum.MESSAGE_DELETE_EVENT,
-                message
-            );
-        });
+        res.status(200).json(new ApiResponse(200, messages, "Messages deleted successfully"));
 
-        return res.status(200).json(new ApiResponse(200, message, "Message deleted successfully"));
+        if (allAttachments.length > 0) {
+            (async () => {
+                try {
+                    const deletePromises = allAttachments.map((asset) =>
+                        deleteFromCloudinary(asset.publicId)
+                    );
+                    await Promise.all(deletePromises);
+                } catch (err) {
+                    console.error("Background attachment deletion failed:", err);
+                }
+            })();
+        }
     });
 
     static uploadMessageAttachments = asyncHandler(async (req: AuthRequest, res: Response) => {

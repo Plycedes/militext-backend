@@ -8,15 +8,14 @@ const router = Router();
 router.use(verifyJWT);
 
 router
+    .route("/message/attachments/upload")
+    .post(upload.array("attachments", 10), MessageController.uploadMessageAttachments);
+
+router
     .route("/:chatId")
     .get(MessageController.getAllMessages)
     .post(upload.fields([{ name: "attachments", maxCount: 30 }]), MessageController.sendMessage);
 
-//Delete message route based on Message id
-
-router.route("/:chatId/:messageId").delete(MessageController.deleteMessage);
-router
-    .route("/message/attachments/upload")
-    .post(upload.array("attachments", 10), MessageController.uploadMessageAttachments);
+router.route("/delete/:chatId").post(MessageController.deleteMessages);
 
 export default router;
