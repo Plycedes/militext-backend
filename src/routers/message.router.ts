@@ -11,11 +11,12 @@ router
     .route("/message/attachments/upload")
     .post(upload.array("attachments", 10), MessageController.uploadMessageAttachments);
 
+router.route("/delete/:chatId").post(MessageController.deleteMessages);
+router.route("/edit/:messageId").patch(MessageController.editMessage);
+
 router
     .route("/:chatId")
     .get(MessageController.getAllMessages)
     .post(upload.fields([{ name: "attachments", maxCount: 30 }]), MessageController.sendMessage);
-
-router.route("/delete/:chatId").post(MessageController.deleteMessages);
 
 export default router;

@@ -266,4 +266,25 @@ export class MessageController {
             .status(201)
             .json(new ApiResponse(201, uploadedFiles, "Attachments uploaded successfully"));
     });
+
+    static editMessage = asyncHandler(async (req: AuthRequest, res: Response) => {
+        const { messageId } = req.params;
+        const { content } = req.body;
+
+        if (!content) {
+            throw new ApiError(400, "Message content or attachment is required");
+        }
+
+        const message = await ChatMessage.findByIdAndUpdate(messageId, { content }, { new: true });
+
+        if (!message) {
+            throw new ApiError(404, "Message not found");
+        }
+
+        console.log(message);
+
+        emitSocketEvent(req, message.chat.toString(), ChatEventEnum.MESSAGE_EDITED_EVENT, {});
+
+        return res.status(201).json(new ApiResponse(200, {}, "Message saved successfully"));
+    });
 }

@@ -12,6 +12,7 @@ export const ChatEventEnum = {
     LEAVE_CHAT_EVENT: "leaveChat",
     UPDATE_GROUP_NAME_EVENT: "updateGroupName",
     MESSAGE_RECEIVED_EVENT: "messageReceived",
+    MESSAGE_EDITED_EVENT: "messageEdited",
     NEW_CHAT_EVENT: "newChat",
     SOCKET_ERROR_EVENT: "socketError",
     STOP_TYPING_EVENT: "stopTyping",
