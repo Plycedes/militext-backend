@@ -149,9 +149,12 @@ MessageController.sendMessage = (0, asyncHandler_1.asyncHandler)((req, res) => _
         .status(201)
         .json(new ApiResponse_1.ApiResponse(201, receivedMessage, "Message saved successfully"));
 }));
-MessageController.deleteMessage = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b;
-    const { chatId, messageId } = req.params;
+MessageController.deleteMessages = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { chatId } = req.params;
+    const { messageIds } = req.body;
+    if (!Array.isArray(messageIds) || messageIds.length === 0) {
+        throw new ApiError_1.ApiError(400, "No message IDs provided");
+    }
     const chat = yield chat_model_1.Chat.findOne({
         _id: new mongoose_1.default.Types.ObjectId(chatId),
         participants: req.user._id,
@@ -159,32 +162,39 @@ MessageController.deleteMessage = (0, asyncHandler_1.asyncHandler)((req, res) =>
     if (!chat) {
         throw new ApiError_1.ApiError(404, "Chat does not exist");
     }
-    const message = yield message_model_1.ChatMessage.findOne({
-        _id: new mongoose_1.default.Types.ObjectId(messageId),
+    const messages = yield message_model_1.ChatMessage.find({
+        _id: { $in: messageIds.map((id) => new mongoose_1.default.Types.ObjectId(id)) },
     });
-    if (!message) {
-        throw new ApiError_1.ApiError(404, "Message does not exits");
+    if (messages.length === 0) {
+        throw new ApiError_1.ApiError(404, "No messages found");
     }
-    if (message.sender.toString() !== req.user._id.toString()) {
-        throw new ApiError_1.ApiError(403, "Not authorized to delete");
+    const unauthorized = messages.some((msg) => msg.sender.toString() !== req.user._id.toString());
+    if (unauthorized) {
+        throw new ApiError_1.ApiError(403, "Not authorized to delete one or more messages");
     }
-    if (message.attachments.length > 0) {
-        const deletePromises = message.attachments.map((asset) => (0, cloudinary_1.deleteFromCloudinary)(asset.publicId));
-        yield Promise.all(deletePromises);
-    }
-    yield message_model_1.ChatMessage.deleteOne({ _id: new mongoose_1.default.Types.ObjectId(messageId) });
-    if (((_b = chat.lastMessage) === null || _b === void 0 ? void 0 : _b.toString()) === message._id) {
+    const allAttachments = messages.flatMap((msg) => msg.attachments || []);
+    yield message_model_1.ChatMessage.deleteMany({
+        _id: { $in: messageIds.map((id) => new mongoose_1.default.Types.ObjectId(id)) },
+    });
+    if (chat.lastMessage && messageIds.includes(chat.lastMessage.toString())) {
         const lastMessage = yield message_model_1.ChatMessage.findOne({ chat: chatId }, {}, { sort: { createdAt: -1 } });
         yield chat_model_1.Chat.findByIdAndUpdate(chatId, {
             lastMessage: lastMessage ? lastMessage._id : null,
         });
     }
-    chat.participants.forEach((participantsObjectID) => {
-        if (participantsObjectID.toString() === req.user._id.toString())
-            return;
-        (0, socket_1.emitSocketEvent)(req, participantsObjectID.toString(), constants_1.ChatEventEnum.MESSAGE_DELETE_EVENT, message);
-    });
-    return res.status(200).json(new ApiResponse_1.ApiResponse(200, message, "Message deleted successfully"));
+    (0, socket_1.emitSocketEvent)(req, chatId, constants_1.ChatEventEnum.MESSAGE_DELETE_EVENT, {});
+    res.status(200).json(new ApiResponse_1.ApiResponse(200, messages, "Messages deleted successfully"));
+    if (allAttachments.length > 0) {
+        (() => __awaiter(void 0, void 0, void 0, function* () {
+            try {
+                const deletePromises = allAttachments.map((asset) => (0, cloudinary_1.deleteFromCloudinary)(asset.publicId));
+                yield Promise.all(deletePromises);
+            }
+            catch (err) {
+                console.error("Background attachment deletion failed:", err);
+            }
+        }))();
+    }
 }));
 MessageController.uploadMessageAttachments = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const files = req.files;

@@ -11,7 +11,7 @@ router.route("/").get(chat_controller_1.ChatController.getAllChats);
 router.route("/users").get(chat_controller_1.ChatController.searchAvailableUsers);
 router.route("/group").post(chat_controller_1.ChatController.createAGroupChat);
 router.route("/leave/group/:chatId").delete(chat_controller_1.ChatController.leaveGroupChat);
-router.route("/remove/:chatId").delete(chat_controller_1.ChatController.deleteOneOnOneChat);
+router.route("/remove").patch(chat_controller_1.ChatController.deleteChat);
 router.route("/promote").post(chat_controller_1.ChatController.promoteToAdmin);
 router.route("/demote").post(chat_controller_1.ChatController.demoteFromAdmin);
 // ---- Dynamic routes after ----
@@ -23,7 +23,6 @@ router
     .route("/group/:chatId")
     .get(chat_controller_1.ChatController.getGroupChatDetails)
     .patch(chat_controller_1.ChatController.renameGroupChat)
-    .delete(chat_controller_1.ChatController.deleteGroupChat)
     .post(multer_middleware_1.upload.single("avatar"), chat_controller_1.ChatController.updateGroupAvatar);
 router
     .route("/group/:chatId/:participantNum")

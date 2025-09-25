@@ -515,23 +515,41 @@ export class ChatController {
         return res.status(200).json(new ApiResponse(200, chat, "Avatar updated successfully"));
     });
 
-    static deleteChat = asyncHandler(async (req: AuthRequest, res: Response) => {
-        const { chatId } = req.params;
-        const chat = await Chat.findById(chatId);
+    static deleteChat = asyncHandler(
+        async (req: AuthRequest<{ chatIds: string[] }>, res: Response) => {
+            const { chatIds } = req.body;
 
-        if (!chat) {
-            throw new ApiError(404, "Chat not found");
+            if (!chatIds || chatIds.length === 0) {
+                throw new ApiError(400, "No chatIds provided");
+            }
+
+            const chats = await Chat.find({ _id: { $in: chatIds } });
+
+            if (chats.length === 0) {
+                throw new ApiError(404, "No chats found");
+            }
+
+            // Process each chat
+            const updatedChats = await Promise.all(
+                chats.map(async (chat) => {
+                    if (!chat.participants.includes(req.user!._id)) {
+                        throw new ApiError(400, `User not a participant of chat ${chat._id}`);
+                    }
+
+                    if (!chat.deletedBy.includes(req.user!._id)) {
+                        chat.deletedBy.push(req.user!._id);
+                        await chat.save();
+                    }
+
+                    return chat;
+                })
+            );
+
+            return res
+                .status(200)
+                .json(new ApiResponse(200, updatedChats, "Chats marked deleted successfully"));
         }
-
-        if (!chat.participants.includes(req.user!._id)) {
-            throw new ApiError(400, "User not a particiapant of this chat");
-        }
-
-        chat.deletedBy.push(req.user!._id);
-        chat.save();
-
-        return res.status(200).json(new ApiResponse(200, chat, "Chat marked deleted successfully"));
-    });
+    );
 
     static leaveGroupChat = asyncHandler(async (req: AuthRequest, res: Response) => {
         const { chatId } = req.params;

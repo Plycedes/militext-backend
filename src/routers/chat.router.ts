@@ -16,7 +16,7 @@ router.route("/group").post(ChatController.createAGroupChat);
 
 router.route("/leave/group/:chatId").delete(ChatController.leaveGroupChat);
 
-router.route("/remove/:chatId").delete(ChatController.deleteChat);
+router.route("/remove").patch(ChatController.deleteChat);
 
 router.route("/promote").post(ChatController.promoteToAdmin);
 router.route("/demote").post(ChatController.demoteFromAdmin);

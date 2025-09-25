@@ -91,6 +91,7 @@ const mountMessageEvent = (io, socket) => {
             })));
             // Update chat lastMessage
             chat.lastMessage = newMessage._id;
+            chat.deletedBy = [];
             yield chat.save();
             // Emit message to all participants in chat room
             io.in(chatId).emit(constants_1.ChatEventEnum.NEW_MESSAGE_EVENT, populatedMessage);

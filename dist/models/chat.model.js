@@ -71,5 +71,11 @@ const chatSchema = new mongoose_1.Schema({
     avatarId: {
         type: String,
     },
+    deletedBy: [
+        {
+            type: mongoose_1.Schema.Types.ObjectId,
+            ref: "User",
+        },
+    ],
 }, { timestamps: true });
 exports.Chat = mongoose_1.default.models.Chat || mongoose_1.default.model("Chat", chatSchema);

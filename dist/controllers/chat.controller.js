@@ -459,57 +459,29 @@ ChatController.updateGroupAvatar = (0, asyncHandler_1.asyncHandler)((req, res) =
     const chat = yield chat_model_1.Chat.findByIdAndUpdate(chatId, { avatar: avatar.url, avatarId: avatar.public_id }, { new: true });
     return res.status(200).json(new ApiResponse_1.ApiResponse(200, chat, "Avatar updated successfully"));
 }));
-ChatController.deleteGroupChat = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b, _c, _d;
-    const { chatId } = req.params;
-    const groupChat = yield chat_model_1.Chat.aggregate([
-        {
-            $match: {
-                _id: new mongoose_1.default.Types.ObjectId(chatId),
-                isGroupChat: true,
-            },
-        },
-        ...chatCommonAggregation(),
-    ]);
-    const chat = groupChat[0];
-    if (!chat) {
-        throw new ApiError_1.ApiError(404, "Group chat does not exist");
+ChatController.deleteChat = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { chatIds } = req.body;
+    if (!chatIds || chatIds.length === 0) {
+        throw new ApiError_1.ApiError(400, "No chatIds provided");
     }
-    if (((_b = chat.admin) === null || _b === void 0 ? void 0 : _b.toString()) !== ((_c = req.user._id) === null || _c === void 0 ? void 0 : _c.toString())) {
-        throw new ApiError_1.ApiError(404, "Only admin can delete the group");
+    const chats = yield chat_model_1.Chat.find({ _id: { $in: chatIds } });
+    if (chats.length === 0) {
+        throw new ApiError_1.ApiError(404, "No chats found");
     }
-    yield chat_model_1.Chat.findByIdAndDelete(chatId);
-    yield deleteCascadeChatMessages(chatId);
-    (_d = chat === null || chat === void 0 ? void 0 : chat.participants) === null || _d === void 0 ? void 0 : _d.forEach((participant) => {
-        var _b;
-        if (participant._id.toString() === req.user._id.toString())
-            return;
-        (0, socket_1.emitSocketEvent)(req, (_b = participant._id) === null || _b === void 0 ? void 0 : _b.toString(), constants_1.ChatEventEnum.LEAVE_CHAT_EVENT, chat);
-    });
-    return res.status(200).json(new ApiResponse_1.ApiResponse(200, {}, "Group chat deleted successfully"));
-}));
-ChatController.deleteOneOnOneChat = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b, _c;
-    const { chatId } = req.params;
-    const chat = yield chat_model_1.Chat.aggregate([
-        {
-            $match: {
-                _id: new mongoose_1.default.Types.ObjectId(chatId),
-            },
-        },
-        ...chatCommonAggregation(),
-    ]);
-    const payload = chat[0];
-    if (!payload) {
-        throw new ApiError_1.ApiError(404, "Chat does not exist");
-    }
-    yield chat_model_1.Chat.findByIdAndDelete(chatId);
-    yield deleteCascadeChatMessages(chatId);
-    const otherParticipant = (_b = payload === null || payload === void 0 ? void 0 : payload.participants) === null || _b === void 0 ? void 0 : _b.find((participant) => (participant === null || participant === void 0 ? void 0 : participant._id.toString()) !== req.user._id.toString());
-    if (otherParticipant) {
-        (0, socket_1.emitSocketEvent)(req, (_c = otherParticipant._id) === null || _c === void 0 ? void 0 : _c.toString(), constants_1.ChatEventEnum.LEAVE_CHAT_EVENT, payload);
-    }
-    return res.status(200).json(new ApiResponse_1.ApiResponse(200, {}, "Chat deleted successfully"));
+    // Process each chat
+    const updatedChats = yield Promise.all(chats.map((chat) => __awaiter(void 0, void 0, void 0, function* () {
+        if (!chat.participants.includes(req.user._id)) {
+            throw new ApiError_1.ApiError(400, `User not a participant of chat ${chat._id}`);
+        }
+        if (!chat.deletedBy.includes(req.user._id)) {
+            chat.deletedBy.push(req.user._id);
+            yield chat.save();
+        }
+        return chat;
+    })));
+    return res
+        .status(200)
+        .json(new ApiResponse_1.ApiResponse(200, updatedChats, "Chats marked deleted successfully"));
 }));
 ChatController.leaveGroupChat = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _b;
@@ -664,6 +636,7 @@ ChatController.getAllChats = (0, asyncHandler_1.asyncHandler)((req, res) => __aw
         {
             $match: {
                 participants: { $elemMatch: { $eq: userId } },
+                deletedBy: { $ne: userId },
             },
         },
         {
