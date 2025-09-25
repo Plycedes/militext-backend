@@ -216,3 +216,17 @@ MessageController.uploadMessageAttachments = (0, asyncHandler_1.asyncHandler)((r
         .status(201)
         .json(new ApiResponse_1.ApiResponse(201, uploadedFiles, "Attachments uploaded successfully"));
 }));
+MessageController.editMessage = (0, asyncHandler_1.asyncHandler)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { messageId } = req.params;
+    const { content } = req.body;
+    if (!content) {
+        throw new ApiError_1.ApiError(400, "Message content or attachment is required");
+    }
+    const message = yield message_model_1.ChatMessage.findByIdAndUpdate(messageId, { content }, { new: true });
+    if (!message) {
+        throw new ApiError_1.ApiError(404, "Message not found");
+    }
+    console.log(message);
+    (0, socket_1.emitSocketEvent)(req, message.chat.toString(), constants_1.ChatEventEnum.MESSAGE_EDITED_EVENT, {});
+    return res.status(201).json(new ApiResponse_1.ApiResponse(200, {}, "Message saved successfully"));
+}));

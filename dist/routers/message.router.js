@@ -9,9 +9,10 @@ router.use(auth_middleware_1.verifyJWT);
 router
     .route("/message/attachments/upload")
     .post(multer_middleware_1.upload.array("attachments", 10), message_controller_1.MessageController.uploadMessageAttachments);
+router.route("/delete/:chatId").post(message_controller_1.MessageController.deleteMessages);
+router.route("/edit/:messageId").patch(message_controller_1.MessageController.editMessage);
 router
     .route("/:chatId")
     .get(message_controller_1.MessageController.getAllMessages)
     .post(multer_middleware_1.upload.fields([{ name: "attachments", maxCount: 30 }]), message_controller_1.MessageController.sendMessage);
-router.route("/delete/:chatId").post(message_controller_1.MessageController.deleteMessages);
 exports.default = router;
